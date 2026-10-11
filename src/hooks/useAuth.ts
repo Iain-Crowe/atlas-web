@@ -45,6 +45,9 @@ function useAuth(): UseAuthResult {
         } else {
           clearToken()
         }
+      } catch {
+        // A failed session check returns to sign-in without an unhandled rejection.
+        setAuthenticated(false)
       } finally {
         setCheckingAuth(false)
       }

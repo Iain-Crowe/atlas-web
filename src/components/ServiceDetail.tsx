@@ -17,6 +17,7 @@ type ServiceDetailProps = {
   minecraftStatus: MinecraftStatus | null
   minecraftError: string | null
   actionLoading: ServiceAction | null
+  actionsDisabled: boolean
   actionError: string | null
   onAction: (action: ServiceAction) => Promise<void>
 }
@@ -64,6 +65,7 @@ function ServiceDetail({
   minecraftStatus,
   minecraftError,
   actionLoading,
+  actionsDisabled,
   actionError,
   onAction,
 }: ServiceDetailProps) {
@@ -121,7 +123,7 @@ function ServiceDetail({
               {canStart && (
                 <button
                   className="service-action-button primary"
-                  disabled={actionLoading !== null}
+                  disabled={actionsDisabled}
                   onClick={() => onAction("start")}
                 >
                   {actionLoading === "start"
@@ -134,7 +136,7 @@ function ServiceDetail({
                 <>
                   <button
                     className="service-action-button"
-                    disabled={actionLoading !== null}
+                    disabled={actionsDisabled}
                     onClick={() => onAction("restart")}
                   >
                     {actionLoading === "restart"
@@ -144,7 +146,7 @@ function ServiceDetail({
 
                   <button
                     className="service-action-button danger"
-                    disabled={actionLoading !== null}
+                    disabled={actionsDisabled}
                     onClick={() => onAction("stop")}
                   >
                     {actionLoading === "stop"
@@ -260,7 +262,7 @@ function ServiceDetail({
           {service.name === "pihole" && <PiHolePanel key={service.id} serviceId={service.id} />}
 
           {actionError && (
-            <p className="action-error">
+            <p className="action-error" role="alert">
               {actionError}
             </p>
           )}

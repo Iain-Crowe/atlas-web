@@ -70,13 +70,13 @@ export default function NetworkPanel() {
     <div className="network-layout">
       <div className="network-live">
         <button type="button" className="network-host" aria-pressed={source === "host"} onClick={() => setSource("host")}>
-          <strong>Atlas Host · {host?.interfaces.join(", ") || "wlo1"}</strong>
+          <strong>Atlas Host · {host?.interfaces.join(", ") || "Interface unavailable"}</strong>
           <span>Receive: {rate(host?.rx_mbps)}</span><span>Send: {rate(host?.tx_mbps)}</span>
           <small>{states[host?.state ?? "unavailable"]}</small>
         </button>
         <button type="button" className="network-service network-quality" aria-pressed={source === "link"} onClick={() => setSource("link")}>
           <strong>Router &amp; Wi-Fi Health</strong>
-          <span>Router: {quality?.router ?? "192.168.4.1"}</span>
+          <span>Router: {quality?.router ?? "Unavailable"}</span>
           <span>Latency: {valueWithUnit(quality?.latency_ms, "ms")}</span>
           <span>Probe Loss: {valueWithUnit(quality?.loss_percent, "%")}</span>
           <span>Signal: {valueWithUnit(quality?.signal_dbm, "dBm")}</span>

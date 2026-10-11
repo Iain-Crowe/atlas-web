@@ -1,43 +1,10 @@
+import { getStatusClass, getStatusLabel } from "../utils/serviceStatus"
 import type { ManagedService } from "../types"
 
 type ServiceCardProps = {
   service: ManagedService
   selected: boolean
   onSelect: (service: ManagedService) => void
-}
-
-function getStatusClass(state?: string) {
-  switch (state) {
-    case "running":
-      return "status-running"
-
-    case "exited":
-    case "dead":
-      return "status-stopped"
-
-    default:
-      return "status-unknown"
-  }
-}
-
-function getStatusLabel(state?: string) {
-  switch (state) {
-    case "running":
-      return "Running"
-
-    case "exited":
-    case "dead":
-      return "Stopped"
-
-    case "paused":
-      return "Paused"
-
-    case "restarting":
-      return "Restarting"
-
-    default:
-      return "Unknown"
-  }
 }
 
 function ServiceCard({
@@ -47,6 +14,8 @@ function ServiceCard({
 }: ServiceCardProps) {
   return (
     <button
+      type="button"
+      aria-pressed={selected}
       className={`service-card ${selected ? "selected" : ""}`}
       onClick={() => onSelect(service)}
     >
@@ -54,7 +23,7 @@ function ServiceCard({
         {service.display_name}
       </span>
 
-      <div className="service-status">
+      <span className="service-status">
         <span
           className={`status-dot ${getStatusClass(
             service.runtime?.state
@@ -64,7 +33,7 @@ function ServiceCard({
         <span className="status-text">
           {getStatusLabel(service.runtime?.state)}
         </span>
-      </div>
+      </span>
     </button>
   )
 }

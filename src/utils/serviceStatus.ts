@@ -7,6 +7,10 @@ export function getStatusClass(state?: string): string {
     case "dead":
       return "status-stopped"
 
+    case "paused":
+    case "restarting":
+      return "status-attention"
+
     default:
       return "status-unknown"
   }
@@ -20,6 +24,9 @@ export function getStatusLabel(state?: string): string {
     case "exited":
     case "dead":
       return "Stopped"
+
+    case "created":
+      return "Created"
 
     case "paused":
       return "Paused"

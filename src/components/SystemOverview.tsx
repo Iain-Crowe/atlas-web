@@ -79,8 +79,8 @@ function SystemOverview({
     <section className="panel system-overview">
       <h2>System Overview</h2>
 
-      {loading && <p>Loading system status...</p>}
-      {error && <p>{error}</p>}
+      {loading && <p role="status">Loading system status…</p>}
+      {error && <p className="history-warning" role="status">Host readings may be out of date. {error}</p>}
 
       {status && (
         <div className="system-stats enhanced">
