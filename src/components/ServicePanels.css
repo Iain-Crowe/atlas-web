@@ -4,10 +4,6 @@
   --service-tint: #94b8e510;
   --service-border: #94b8e540;
 }
-.service-themed[data-service="minecraft"] { --service-accent: #8acba0; --service-tint: #8acba010; --service-border: #8acba045; }
-.service-themed[data-service="jellyfin"] { --service-accent: #bea8ef; --service-tint: #bea8ef10; --service-border: #bea8ef45; }
-.service-themed[data-service="pihole"] { --service-accent: #efa0a1; --service-tint: #efa0a110; --service-border: #efa0a145; }
-.service-themed[data-service="media"] { --service-accent: #94b8e5; --service-tint: #94b8e510; --service-border: #94b8e540; }
 .service-themed .service-identity-header {
   display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
   margin: -1.5rem -1.5rem 1.5rem; padding: 1.5rem;

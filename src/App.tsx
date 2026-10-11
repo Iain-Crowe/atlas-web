@@ -3,6 +3,7 @@ import "./App.css"
 import "./components/ServicePanels.css"
 import { apiFetch } from "./api"
 import LoginView from "./LoginView"
+import { ServiceIcon } from "./components/ServiceIdentity"
 import RuntimeSummary from "./components/RuntimeSummary"
 import MediaPanel from "./components/MediaPanel"
 import NetworkPanel from "./components/NetworkPanel"
@@ -123,7 +124,7 @@ function Console({ logout }: { logout: () => void }) {
         <aside className="sidebar" aria-label="Service selection"><h2 className="eyebrow">Managed Services</h2>{serviceFeedback}
           {services.map(service => <ServiceCard key={service.id} service={service} selected={selection === service.id} onSelect={handleSelectService} />)}
           <h2 className="eyebrow sidebar-group">Applications</h2>
-          <button className={`service-card ${selection === "media" ? "selected" : ""}`} aria-pressed={selection === "media"} onClick={() => { setSelection("media"); setActionError(null) }}><span className="service-name">Media Stack</span><span className="muted">Aggregate telemetry</span></button>
+          <button className={`service-card ${selection === "media" ? "selected" : ""}`} aria-pressed={selection === "media"} onClick={() => { setSelection("media"); setActionError(null) }}><span className="service-name service-card-name"><ServiceIcon name="media" />Media Stack</span><span className="muted">Aggregate telemetry</span></button>
         </aside>
         {selection === "media" ? <MediaPanel /> : <ServiceDetail service={selectedService} minecraftStatus={minecraftStatus} minecraftError={minecraftError}
           actionLoading={pending?.serviceId === selectedService?.id ? pending?.action ?? null : null}

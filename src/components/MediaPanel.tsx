@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import "./MediaPanel.css"
+import MediaServiceBadge from "./MediaServiceBadge"
 import ServiceIdentity from "./ServiceIdentity"
 import StatusBanner from "./StatusBanner"
 import { apiFetch } from "../api"
@@ -25,11 +26,6 @@ const activityTone = (n: number | null | undefined, tone: MetricTone = "activity
   n == null || !Number.isFinite(n) || n <= 0 ? "neutral" : tone
 const alertTone = (n: number | null | undefined, tone: "warning" | "danger"): MetricTone =>
   n == null || !Number.isFinite(n) ? "neutral" : n > 0 ? tone : "good"
-const containerTone = (state: string, health: string): MetricTone => {
-  if (health === "unhealthy" || state === "dead") return "danger"
-  if (["paused", "restarting", "exited"].includes(state) || health === "starting") return "warning"
-  return state === "running" ? "good" : "neutral"
-}
 
 export default function MediaPanel() {
   const [data, setData] = useState<Snapshot | null>(null)
@@ -101,7 +97,7 @@ export default function MediaPanel() {
       description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}
-    {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <span key={name} className={`media-service media-tone-${containerTone(c.state, c.health)}`}>{names[name] ?? name}: {c.state}{c.health !== 'none' ? ` · ${c.health}` : ''}</span>)}</div>}
+    {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <MediaServiceBadge key={name} name={name} label={names[name] ?? name} state={c.state} health={c.health} />)}</div>}
     {metricGroups.map(group => <section className={`metric-group media-group-${group.accent}`} key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text, tone]) => <div className={`media-metric media-tone-${tone}`} key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
     <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? new Date(data[key].updated_at! * 1000).toLocaleTimeString() : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
     <p className="history-muted">Torrent states and movie/episode queues overlap; they are not combined into a download total. Missing movies may include unreleased titles. Application alerts cover Sonarr, Radarr and Prowlarr. Gluetun’s container health is not a VPN leak test.</p>
