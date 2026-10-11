@@ -1,4 +1,5 @@
 import { getStatusClass, getStatusLabel } from "../utils/serviceStatus"
+import { ServiceIcon } from "./ServiceIdentity"
 import type { ManagedService } from "../types"
 
 type ServiceCardProps = {
@@ -19,7 +20,8 @@ function ServiceCard({
       className={`service-card ${selected ? "selected" : ""}`}
       onClick={() => onSelect(service)}
     >
-      <span className="service-name">
+      <span className="service-name service-card-name">
+        <ServiceIcon name={service.name} />
         {service.display_name}
       </span>
 

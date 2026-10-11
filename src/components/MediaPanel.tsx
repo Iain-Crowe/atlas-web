@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import "./MediaPanel.css"
+import ServiceIdentity from "./ServiceIdentity"
 import StatusBanner from "./StatusBanner"
 import { apiFetch } from "../api"
 
@@ -93,8 +94,8 @@ export default function MediaPanel() {
     { title: "Library Pipeline", accent: "library", metrics: metrics.slice(11, 16) },
     { title: "Requests & Alerts", accent: "warning", metrics: metrics.slice(16) },
   ]
-  return <section className="panel service-detail media-panel" data-alert-severity={(errors ?? 0) > 0 || (unhealthy ?? 0) > 0 ? "danger" : "normal"}>
-    <div className="media-heading"><h2>Media Stack</h2><span className="history-muted">Live Aggregates · 30-Second Refresh</span></div>
+  return <section className="panel service-detail media-panel service-themed" data-service="media" data-alert-severity={(errors ?? 0) > 0 || (unhealthy ?? 0) > 0 ? "danger" : "normal"}>
+    <ServiceIdentity name="media" title="Media Stack" />
     <StatusBanner tone={error || alertCount === null ? "unavailable" : alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
       title={error ? "Media Telemetry Unavailable" : alertCount === null ? "Application Status Incomplete" : alertCount > 0 ? `${alertCount} Application ${alertCount === 1 ? "Alert" : "Alerts"}` : (notRunning ?? 0) > 0 ? "Some Media Containers Are Not Running" : "No Application Alerts Reported"}
       description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />

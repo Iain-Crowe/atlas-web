@@ -49,7 +49,7 @@ export default function PiHolePanel({ serviceId }: { serviceId: number }) {
     {!data && !error && <p role="status">Loading Pi-hole telemetry…</p>}
     {data && !summary && <p role="status">{data.summary.state === "warming_up" ? "Waiting for the first statistics reading…" : "Pi-hole statistics are currently unavailable."}</p>}
     <div className="pihole-metrics">
-      <div className="pihole-metric"><span>DNS Blocking</span><strong>{blocking ? states[blocking.status] : "Unavailable"}</strong>
+      <div className="pihole-metric blocking-metric" data-blocking={blocking?.status ?? "unknown"}><span>DNS Blocking</span><strong>{blocking ? states[blocking.status] : "Unavailable"}</strong>
         {blocking?.timer_seconds != null && <small>Scheduled Change In {Math.ceil(blocking.timer_seconds)} Seconds</small>}
       </div>
       {labels.map(([key, label]) => <div className="pihole-metric" key={key}><span>{label}</span>

@@ -146,55 +146,7 @@
 .history-chart-detail { display: flex; flex-direction: column; }
 
 
-/* Keep live service readings beside history when the panel has enough room. */
-.service-detail {
-  min-width: 0;
-  container-name: service-detail;
-  container-type: inline-size;
-}
-
-
-.service-detail-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.service-live-telemetry {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.service-live-telemetry .detail-grid {
-  margin-top: 0;
-}
-
-.service-live-telemetry .detail-section-title {
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.service-detail-body > .history-panel {
-  margin-top: 0;
-}
-
-.service-detail-body .history-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@container service-detail (min-width: 760px) {
-  .service-detail-body.has-history {
-    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
-  }
-}
-
-@container service-detail (max-width: 539px) {
-  .service-detail-body .history-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
+.service-detail { min-width: 0; container-name: service-detail; container-type: inline-size; }
 
 .network-panel { margin: 0; min-width: 0; container-type: inline-size; container-name: network; }
 .network-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
