@@ -1,3 +1,6 @@
+import PiHolePanel from "./PiHolePanel"
+import JellyfinPanel from "./JellyfinPanel"
+import HistoryPanel from "./HistoryPanel"
 import type {
   ManagedService,
   MinecraftStatus,
@@ -12,6 +15,7 @@ import {
 type ServiceDetailProps = {
   service: ManagedService | null
   minecraftStatus: MinecraftStatus | null
+  minecraftError: string | null
   actionLoading: ServiceAction | null
   actionError: string | null
   onAction: (action: ServiceAction) => Promise<void>
@@ -58,6 +62,7 @@ function getMsptTone(mspt: number | null): MetricTone {
 function ServiceDetail({
   service,
   minecraftStatus,
+  minecraftError,
   actionLoading,
   actionError,
   onAction,
@@ -151,6 +156,8 @@ function ServiceDetail({
             </div>
           </div>
 
+          <div className={service.name === "minecraft" ? "service-detail-body has-history" : "service-detail-body"}>
+          <div className="service-live-telemetry">
           <div className="detail-grid">
             <div>
               <span>Name</span>
@@ -169,7 +176,7 @@ function ServiceDetail({
                   </div>
 
                   <div>
-                    <span>Online players</span>
+                    <span>Online Players</span>
                     <strong>
                       {minecraftStatus.players.length > 0
                         ? minecraftStatus.players.join(", ")
@@ -178,7 +185,7 @@ function ServiceDetail({
                   </div>
                   <div className="minecraft-telemetry-section">
                     <p className="detail-section-title">
-                        Server telemetry
+                        Server Telemetry
                     </p>
                     <div className="minecraft-telemetry">
                         <div className="telemetry-item">
@@ -229,7 +236,7 @@ function ServiceDetail({
 
                         <div className="telemetry-item chunks-metric">
                             <div className="telemetry-head">
-                            <span>Loaded chunks</span>
+                            <span>Loaded Chunks</span>
 
                             <strong className="metric-value">
                                 {minecraftStatus.loaded_chunks !== null
@@ -243,6 +250,14 @@ function ServiceDetail({
                 </>
               )}
           </div>
+
+          {minecraftError && <p className="history-warning" role="status">{minecraftError}</p>}
+          </div>
+          {service.name === "minecraft" && <HistoryPanel key={service.id} kind="minecraft" serviceId={service.id} />}
+          </div>
+
+          {service.name === "jellyfin" && <JellyfinPanel key={service.id} serviceId={service.id} />}
+          {service.name === "pihole" && <PiHolePanel key={service.id} serviceId={service.id} />}
 
           {actionError && (
             <p className="action-error">

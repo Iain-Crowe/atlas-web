@@ -65,11 +65,11 @@ function SystemOverview({
     ? getUsagePercent(status.disk.used_gb, status.disk.total_gb)
     : 0
 
-  const cpuUsagePercent = status
-    ? clampPercent(status.cpu.usage_percent)
-    : 0
+  const cpuUsagePercent = status?.cpu.usage_percent == null
+    ? null
+    : clampPercent(status.cpu.usage_percent)
 
-  const cpuUsageTone = getUsageTone(cpuUsagePercent)
+  const cpuUsageTone = cpuUsagePercent === null ? "neutral" : getUsageTone(cpuUsagePercent)
 
   const cpuTemperatureTone = status
     ? getTemperatureTone(status.cpu.temperature_c)
@@ -93,14 +93,14 @@ function SystemOverview({
             <div className="telemetry-head">
               <span>CPU</span>
               <strong className={`metric-value ${cpuUsageTone}`}>
-                {cpuUsagePercent.toFixed(1)}%
+                {cpuUsagePercent === null ? "Unavailable / warming up" : `${cpuUsagePercent.toFixed(1)}%`}
               </strong>
             </div>
 
             <div className="meter">
               <div
                 className={`meter-fill ${cpuUsageTone}`}
-                style={{ width: `${cpuUsagePercent}%` }}
+                style={{ width: `${cpuUsagePercent ?? 0}%` }}
               />
             </div>
           </div>

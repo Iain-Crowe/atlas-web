@@ -3,6 +3,9 @@ import { useEffect, useState } from "react"
 import "./App.css"
 import { apiFetch } from "./api"
 import LoginView from "./LoginView"
+import MediaPanel from "./components/MediaPanel"
+import NetworkPanel from "./components/NetworkPanel"
+import HistoryPanel from "./components/HistoryPanel"
 import SystemOverview from "./components/SystemOverview"
 import ServiceCard from "./components/ServiceCard"
 import ServiceDetail from "./components/ServiceDetail"
@@ -36,10 +39,12 @@ function App() {
     refreshServices,
   } = useServices(authenticated)
 
+  const [mediaSelected, setMediaSelected] = useState(false)
+
   const [selectedService, setSelectedService] =
     useState<ManagedService | null>(null)
 
-  const minecraftStatus = useMinecraftStatus(
+  const { minecraftStatus, minecraftError } = useMinecraftStatus(
     authenticated,
     selectedService
   )
@@ -50,10 +55,12 @@ function App() {
 
   function handleLogout() {
     logout()
+    setMediaSelected(false)
     setSelectedService(null)
   }
 
   function handleSelectService(service: ManagedService) {
+    setMediaSelected(false)
     setSelectedService(service)
     setActionError(null)
   }
@@ -166,16 +173,34 @@ function App() {
               onSelect={handleSelectService}
             />
           ))}
+        <button
+          type="button"
+          className={`service-card ${mediaSelected ? "selected" : ""}`}
+          aria-pressed={mediaSelected}
+          onClick={() => {
+            setSelectedService(null)
+            setActionError(null)
+            setMediaSelected(true)
+          }}
+        >
+          <span className="service-name">Media Stack</span>
+          <span className="service-status">
+            <span className="status-text">Aggregate Telemetry</span>
+          </span>
+        </button>
       </aside>
       
-      <ServiceDetail
+      {mediaSelected ? <MediaPanel /> : <ServiceDetail
         service={selectedService}
         minecraftStatus={minecraftStatus}
+        minecraftError={minecraftError}
         actionLoading={actionLoading}
         actionError={actionError}
         onAction={handleServiceAction}
-      />
+      />}
     </section>
+    <NetworkPanel />
+    <HistoryPanel kind="host" />
   </main>
 )
 }
