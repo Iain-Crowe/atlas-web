@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch } from "../api"
 
-type PollState<T> = { data: T | null; error: string | null; loading: boolean }
+type PollState<T> = { data: T | null; error: string | null; loading: boolean; updatedAt: number | null }
 type ActiveRequest<T> = { controller: AbortController; promise: Promise<T> }
 
 /** Serial polling with cancellation, request coalescing, and a bounded request time. */
 export default function usePolling<T>(path: string, enabled: boolean, interval: number) {
-  const [state, setState] = useState<PollState<T>>({ data: null, error: null, loading: true })
+  const [state, setState] = useState<PollState<T>>({ data: null, error: null, loading: true, updatedAt: null })
   const active = useRef<ActiveRequest<T> | null>(null)
   const mounted = useRef(false)
   const refresh = useCallback((): Promise<T> => {
@@ -19,7 +19,7 @@ export default function usePolling<T>(path: string, enabled: boolean, interval: 
         const response = await apiFetch(path, { signal: controller.signal })
         if (!response.ok) throw new Error(`Request failed (${response.status})`)
         const data: T = await response.json()
-        if (mounted.current && active.current?.controller === controller) setState({ data, error: null, loading: false })
+        if (mounted.current && active.current?.controller === controller) setState({ data, error: null, loading: false, updatedAt: Date.now() / 1000 })
         return data
       } catch (error) {
         if (mounted.current && active.current?.controller === controller) {

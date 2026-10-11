@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
 import type { ManagedService, MinecraftStatus } from "../types"
 
-type Result = { key: string; minecraftStatus: MinecraftStatus | null; minecraftError: string | null }
+type Result = { minecraftUpdatedAt: number | null; key: string; minecraftStatus: MinecraftStatus | null; minecraftError: string | null }
 
 export default function useMinecraftStatus(authenticated: boolean, selectedService: ManagedService | null) {
   const id = selectedService?.id
@@ -10,7 +10,7 @@ export default function useMinecraftStatus(authenticated: boolean, selectedServi
   const state = selectedService?.runtime?.state
   const enabled = authenticated && name === "minecraft" && state === "running"
   const key = `${id}:${state}`
-  const [result, setResult] = useState<Result>({ key: "", minecraftStatus: null, minecraftError: null })
+  const [result, setResult] = useState<Result>({ minecraftUpdatedAt: null, key: "", minecraftStatus: null, minecraftError: null })
   useEffect(() => {
     if (!enabled || id === undefined) return
     let disposed = false
@@ -27,9 +27,9 @@ export default function useMinecraftStatus(authenticated: boolean, selectedServi
           throw new Error(detail)
         }
         const data: MinecraftStatus = await response.json()
-        if (!disposed) setResult({ key, minecraftStatus: data, minecraftError: null })
+        if (!disposed) setResult({ minecraftUpdatedAt: Date.now() / 1000, key, minecraftStatus: data, minecraftError: null })
       } catch (error) {
-        if (!disposed) setResult({ key, minecraftStatus: null,
+        if (!disposed) setResult({ minecraftUpdatedAt: null, key, minecraftStatus: null,
           minecraftError: error instanceof Error ? error.message : "Minecraft telemetry unavailable" })
       } finally {
         clearTimeout(timeout)
@@ -39,6 +39,6 @@ export default function useMinecraftStatus(authenticated: boolean, selectedServi
     void load()
     return () => { disposed = true; controller?.abort(); clearTimeout(timer) }
   }, [enabled, id, key])
-  if (!enabled) return { minecraftStatus: null, minecraftError: name === "minecraft" ? "Live telemetry is available while the container is running." : null }
-  return result.key === key ? result : { minecraftStatus: null, minecraftError: null }
+  if (!enabled) return { minecraftUpdatedAt: null, minecraftStatus: null, minecraftError: name === "minecraft" ? "Live telemetry is available while the container is running." : null }
+  return result.key === key ? result : { minecraftUpdatedAt: null, minecraftStatus: null, minecraftError: null }
 }

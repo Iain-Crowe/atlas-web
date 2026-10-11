@@ -1,3 +1,4 @@
+import Freshness from "./Freshness"
 import { useEffect, useState } from "react"
 import "./MediaPanel.css"
 import MediaServiceBadge from "./MediaServiceBadge"
@@ -17,6 +18,7 @@ type Snapshot = {
 const messages: Record<string, string> = { warming_up: "Waiting For First Reading", unavailable: "Unavailable", not_configured: "Credentials Need Setup", unauthorized: "Authentication Needs Attention", timeout: "Timed Out", limit: "Collection Limit Reached", invalid_response: "Unexpected API Response", changing: "Queue Changed During Reading", stopped: "Service Stopped" }
 const names: Record<string, string> = { sonarr: "Sonarr", radarr: "Radarr", prowlarr: "Prowlarr", seerr: "Seerr", qbittorrent: "qBittorrent", gluetun: "Gluetun", flaresolverr: "FlareSolverr" }
 const value = <T,>(reading: Reading<T> | undefined): T | null => reading?.state === "ready" ? reading.values : null
+const countLabel = (count: number, label: string) => `${count} ${label}${count === 1 ? "" : "s"}`
 const fmt = (n: number | null | undefined) => n == null ? "—" : n.toLocaleString()
 const rate = (n: number | undefined) => n == null ? "—" : `${(n * 8 / 1e6).toFixed(2)} Mbps`
 const sum = (a: number | undefined, b: number | undefined) => a == null || b == null ? null : a + b
@@ -83,6 +85,19 @@ export default function MediaPanel() {
     ['Application Warnings', fmt(warnings), alertTone(warnings, 'warning')],
     ['Application Errors', fmt(errors), alertTone(errors, 'danger')],
   ]
+  const alertSources: string[] = []
+  for (const [name, health] of [["Sonarr", tv], ["Radarr", movies], ["Prowlarr", indexers]] as const) {
+    if (!health) continue
+    const details = [health.warnings > 0 ? countLabel(health.warnings, "application warning") : "", health.errors > 0 ? countLabel(health.errors, "application error") : ""]
+    if ("queue_warnings" in health && Number(health.queue_warnings) > 0) details.push(countLabel(Number(health.queue_warnings), "queue warning"))
+    if ("queue_errors" in health && Number(health.queue_errors) > 0) details.push(countLabel(Number(health.queue_errors), "queue error"))
+    if (details.some(Boolean)) alertSources.push(`${name}: ${details.filter(Boolean).join(" · ")}`)
+  }
+  if (download?.errors) alertSources.push(`qBittorrent: ${countLabel(download.errors, "torrent error")}`)
+  if (download?.stalled) alertSources.push(`qBittorrent: ${countLabel(download.stalled, "stalled download")}`)
+  for (const [name, container] of Object.entries(containers ?? {})) {
+    if (container.health === "unhealthy") alertSources.push(`${names[name] ?? name}: container unhealthy`)
+  }
   const alertCount = errors === null || warnings === null || unhealthy === null ? null : errors + warnings + unhealthy
   const notRunning = containers ? Object.keys(containers).length - (running ?? 0) : null
   const metricGroups = [
@@ -92,14 +107,15 @@ export default function MediaPanel() {
   ]
   return <section className="panel service-detail media-panel service-themed" data-service="media" data-alert-severity={(errors ?? 0) > 0 || (unhealthy ?? 0) > 0 ? "danger" : "normal"}>
     <ServiceIdentity name="media" title="Media Stack" />
-    <StatusBanner tone={error || alertCount === null ? "unavailable" : alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
-      title={error ? "Media Telemetry Unavailable" : alertCount === null ? "Application Status Incomplete" : alertCount > 0 ? `${alertCount} Application ${alertCount === 1 ? "Alert" : "Alerts"}` : (notRunning ?? 0) > 0 ? "Some Media Containers Are Not Running" : "No Application Alerts Reported"}
+    <StatusBanner tone={error || alertCount === null ? "unavailable" : alertSources.length > 0 || alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
+      title={error ? "Media Telemetry Unavailable" : alertCount === null ? "Application Status Incomplete" : alertCount > 0 ? `${alertCount} Application ${alertCount === 1 ? "Alert" : "Alerts"}` : alertSources.length > 0 ? "Media Services Need Attention" : (notRunning ?? 0) > 0 ? "Some Media Containers Are Not Running" : "No Application Alerts Reported"}
       description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />
+    {alertSources.length > 0 && <ul className="media-alert-sources" aria-label="Alert Sources">{alertSources.map(message => <li key={message}>{message}</li>)}</ul>}
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}
     {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <MediaServiceBadge key={name} name={name} label={names[name] ?? name} state={c.state} health={c.health} />)}</div>}
     {metricGroups.map(group => <section className={`metric-group media-group-${group.accent}`} key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text, tone]) => <div className={`media-metric media-tone-${tone}`} key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
-    <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? new Date(data[key].updated_at! * 1000).toLocaleTimeString() : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
+    <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? <Freshness timestamp={data[key].updated_at} /> : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
     <p className="history-muted">Torrent states and movie/episode queues overlap; they are not combined into a download total. Missing movies may include unreleased titles. Application alerts cover Sonarr, Radarr and Prowlarr. Gluetun’s container health is not a VPN leak test.</p>
     <nav className="media-links" aria-label="Media Services">{['sonarr', 'radarr', 'prowlarr', 'seerr', 'qbittorrent'].map(name => <a key={name} href={`https://${name}.atlas.home.arpa/`} target="_blank" rel="noopener noreferrer">{names[name]} ↗</a>)}</nav>
   </section>

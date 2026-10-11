@@ -1,7 +1,9 @@
+import Freshness from "./Freshness"
 import StatusBanner from "./StatusBanner"
 import type { SystemStatus } from "../types"
 
 type SystemOverviewProps = {
+  updatedAt: number | null
   status: SystemStatus | null
   loading: boolean
   error: string | null
@@ -51,6 +53,7 @@ function getTemperatureTone(temp: number | null): MetricTone {
 
 function SystemOverview({
   status,
+  updatedAt,
   loading,
   error,
 }: SystemOverviewProps) {
@@ -88,7 +91,7 @@ function SystemOverview({
 
   return (
     <section className="panel system-overview">
-      <div className="section-heading host-heading"><div><h2>Host Resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><span className="section-meta">5s refresh</span></div>
+      <div className="section-heading host-heading"><div><h2>Host Resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><Freshness timestamp={updatedAt} maxAge={20} error={!!error} /></div>
       {highReadings.length > 0 && <StatusBanner tone="attention" title="Elevated Resource Readings" description={highReadings.join(" · ")} />}
 
       {loading && <p role="status">Loading system status…</p>}

@@ -1,4 +1,6 @@
-import { useId, useState } from "react"
+import Freshness from "./Freshness"
+import useNow from "../hooks/useNow"
+import { useId, useState, type PointerEvent, type MouseEvent } from "react"
 import useHistory from "../hooks/useHistory"
 import type { HistoryRange, TelemetryHistory } from "../types"
 
@@ -34,6 +36,7 @@ const formatTime = (timestamp: number) => new Date(timestamp * 1000).toLocaleStr
 function MetricChart({ history, metric }: { history: TelemetryHistory; metric: Metric }) {
   const titleId = useId()
   const [selected, setSelected] = useState<number | null>(null)
+  const [hovered, setHovered] = useState<number | null>(null)
   const points = history.points
   const scale = metric.scale ?? 1
   const values = points.map(point => point.metrics[metric.key])
@@ -48,18 +51,33 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
     const command = index > 0 && values[index - 1]?.mean != null ? "L" : "M"
     return `${command}${x(index).toFixed(2)},${y(value.mean).toFixed(2)}`
   }).join(" ")
-  const index = Math.min(selected ?? Math.max(0, points.length - 1), points.length - 1)
+  const nearest = (timestamp: number) => points.reduce((best, point, i) => Math.abs(point.timestamp - timestamp) < Math.abs(points[best].timestamp - timestamp) ? i : best, 0)
+  const inspected = hovered ?? selected
+  const index = inspected === null ? points.length - 1 : nearest(inspected)
+  function inspect(event: PointerEvent<SVGSVGElement> | MouseEvent<SVGSVGElement>, pin: boolean) {
+    const matrix = event.currentTarget.getScreenCTM()
+    if (!matrix || !points.length) return
+    const location = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
+    const timestamp = history.start + Math.max(0, Math.min(1, (location.x - 44) / 532)) * (history.end - history.start)
+    const sample = points[nearest(timestamp)].timestamp
+    if (pin) { setSelected(sample); setHovered(null) } else setHovered(sample)
+  }
   const current = values[index]
   const format = (value: number | null | undefined) => value == null ? "Unavailable" : `${(value * scale).toLocaleString(undefined, { maximumFractionDigits: 2 })}${metric.unit ? ` ${metric.unit}` : ""}`
   return <article className="history-chart">
     <div className="history-chart-heading"><h4>{metric.label}</h4><strong>{format(current?.mean)}</strong></div>
     {available ? <>
-      <svg viewBox="0 0 600 140" role="img" aria-labelledby={titleId}>
-        <title id={titleId}>{metric.label} History. Missing readings appear as gaps. Use the slider below to inspect values.</title>
+      <div className="chart-tools"><span>Hover or tap to inspect</span><button type="button" className="text-button" aria-pressed={selected === null} onClick={() => { setSelected(null); setHovered(null) }}>Latest</button></div>
+      <svg viewBox="0 0 600 140" role="img" aria-labelledby={titleId}
+        onPointerMove={event => { if (event.pointerType === "mouse") inspect(event, false) }}
+        onPointerLeave={() => setHovered(null)} onClick={event => inspect(event, true)}>
+
+        <title id={titleId}>{metric.label} History. Missing readings appear as gaps. Hover, tap, or use the slider below to inspect values.</title>
         {[0, 0.5, 1].map(fraction => <g key={fraction}>
           <line x1="44" x2="576" y1={114 - fraction * 92} y2={114 - fraction * 92} className="history-gridline" />
           <text x="38" y={118 - fraction * 92} textAnchor="end">{(floor + (ceiling - floor) * fraction).toLocaleString(undefined, { maximumFractionDigits: 1 })}</text>
         </g>)}
+        {points[index] && <line x1={x(index)} x2={x(index)} y1="22" y2="114" className="history-cursor" />}
         <path d={path} fill="none" className="history-line" />
         {values.map((value, i) => value?.mean == null ? null : <circle key={points[i].timestamp}
           cx={x(i)} cy={y(value.mean)} r={i === index ? 4 : 1.8}
@@ -68,7 +86,7 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
         </circle>)}
       </svg>
       <input type="range" min="0" max={Math.max(0, points.length - 1)} value={Math.max(0, index)}
-        aria-label={`Inspect ${metric.label} history`} onChange={event => setSelected(Number(event.target.value))} />
+        aria-label={`Inspect ${metric.label} history`} aria-valuetext={`${points[index] ? formatTime(points[index].timestamp) : "No samples"}: ${format(current?.mean)}`} onChange={event => { setSelected(points[Number(event.target.value)].timestamp); setHovered(null) }} />
       <div className="history-chart-detail">
         <span>{points[index] ? formatTime(points[index].timestamp) : "No samples"}</span>
         <span>Min {format(current?.minimum)} · Max {format(current?.maximum)}</span>
@@ -82,7 +100,8 @@ export default function HistoryPanel({ kind, serviceId, source, title }: { kind:
   const [range, setRange] = useState<HistoryRange>("1h")
   const path = kind === "network" ? `/network/${encodeURIComponent(source ?? "host")}/history` : kind === "host" ? "/system/history" : `/services/${serviceId}/minecraft/history`
   const { data, error, loading } = useHistory(path, range)
-  const stale = data && (data.last_sample_at === null || data.end - data.last_sample_at > data.sample_seconds * 3)
+  const now = useNow()
+  const stale = data && (data.last_sample_at === null || now - data.last_sample_at > data.sample_seconds * 3)
   return <section className={`history-panel ${kind === "host" ? "panel host-history" : ""}`}>
     <div className="history-heading">
       <h3>{title ?? (kind === "host" ? "Host History" : "Minecraft History")}</h3>
@@ -94,13 +113,14 @@ export default function HistoryPanel({ kind, serviceId, source, title }: { kind:
     {loading && <p role="status">Loading history…</p>}
     {error && <p role="status" className="history-warning">{error}. Displayed history may be stale.</p>}
     {data && <>
+      <Freshness timestamp={data.last_sample_at} maxAge={data.sample_seconds * 3} error={!!error} label="Last Sample" />
       <p className="history-muted">{formatTime(data.start)} – {formatTime(data.end)} · Local time<br />
         Samples every {data.sample_seconds}s · {data.bucket_seconds}s averages · {data.retention_days}-day retention.
         Gaps mean no reading; amber dots mark incomplete intervals.</p>
       {stale && <p role="status" className="history-warning">{data.last_sample_at === null
         ? "Waiting for the collector’s first sample."
         : `Collector is behind. Last sample: ${formatTime(data.last_sample_at)}.`}</p>}
-      {data.last_sample_at !== null && (data.last_success_at === null || data.end - data.last_success_at > data.sample_seconds * 3) &&
+      {data.last_sample_at !== null && (data.last_success_at === null || now - data.last_success_at > data.sample_seconds * 3) &&
         <p role="status" className="history-warning">Collection is running, but recent measurements are unavailable.</p>}
       {kind === "network" && source !== "link" && <p className="network-totals">
         <strong>Observed Transfer Totals</strong><br />

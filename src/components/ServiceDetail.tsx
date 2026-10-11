@@ -1,3 +1,4 @@
+import Freshness from "./Freshness"
 import PiHolePanel from "./PiHolePanel"
 import JellyfinPanel from "./JellyfinPanel"
 import HistoryPanel from "./HistoryPanel"
@@ -6,6 +7,7 @@ import type { ManagedService, MinecraftStatus, ServiceAction } from "../types"
 
 type Props = {
   service: ManagedService | null
+  minecraftUpdatedAt: number | null
   minecraftStatus: MinecraftStatus | null
   minecraftError: string | null
   actionLoading: ServiceAction | null
@@ -24,7 +26,7 @@ function Metric({ label, value, tone = "good", percent }: {
   </div>
 }
 
-export default function ServiceDetail({ service, minecraftStatus, minecraftError, actionLoading, actionsDisabled, actionError, onAction }: Props) {
+export default function ServiceDetail({ service, minecraftUpdatedAt, minecraftStatus, minecraftError, actionLoading, actionsDisabled, actionError, onAction }: Props) {
   if (!service) return <section className="panel service-detail"><div className="empty-state"><h2>Service Details</h2><p>Select a service to view details.</p></div></section>
   const state = service.runtime?.state
   const canStart = ["exited", "dead", "created"].includes(state ?? "")
@@ -46,6 +48,7 @@ export default function ServiceDetail({ service, minecraftStatus, minecraftError
     <ServiceIdentity name={service.name} title={service.display_name} state={state} actions={actions} />
     {actionError && <p className="action-error" role="alert">{actionError}</p>}
     {service.name === "minecraft" && <>
+      {state === "running" && <Freshness timestamp={minecraftUpdatedAt} maxAge={25} error={!!minecraftError} />}
       {minecraftError && <p className="history-warning" role="status">{minecraftError}</p>}
       {!minecraftStatus && !minecraftError && state === "running" && <p className="muted" role="status">Loading live Minecraft telemetry…</p>}
       <section className="service-live-section" aria-label="Live Minecraft telemetry">

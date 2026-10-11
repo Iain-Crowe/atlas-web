@@ -1,9 +1,10 @@
+import Freshness from "./Freshness"
 import type { ManagedService } from "../types"
 import StatusBanner from "./StatusBanner"
 
-type Props = { services: ManagedService[]; loading: boolean; error: string | null }
+type Props = { updatedAt: number | null; services: ManagedService[]; loading: boolean; error: string | null }
 
-export default function RuntimeSummary({ services, loading, error }: Props) {
+export default function RuntimeSummary({ services, loading, error, updatedAt }: Props) {
   const running = services.filter(service => service.runtime?.state === "running").length
   const stopped = services.filter(service => ["exited", "dead", "created"].includes(service.runtime?.state ?? "")).length
   const other = services.length - running - stopped
@@ -19,5 +20,7 @@ export default function RuntimeSummary({ services, loading, error }: Props) {
         <div><dt>Other States</dt><dd>{known ? other : "—"}</dd></div>
       </dl>
     </StatusBanner>
+    {known && !allRunning && <p className="history-warning">{services.filter(service => service.runtime?.state !== "running").map(service => `${service.display_name}: ${service.runtime?.state ?? "unknown"}`).join(" · ")}</p>}
+    <Freshness timestamp={updatedAt} maxAge={20} error={!!error} />
   </section>
 }

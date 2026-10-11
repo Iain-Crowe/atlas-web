@@ -1,3 +1,4 @@
+import Freshness from "./Freshness"
 import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
 import "./PiHolePanel.css"
@@ -57,8 +58,8 @@ export default function PiHolePanel({ serviceId }: { serviceId: number }) {
       </div>)}
     </div>
     <p className="history-muted">Statistics reflect Pi-hole’s current reporting window. Active clients are clients seen in that window, not necessarily connected now. Blocklist Domains is the gravity-list count.</p>
-    <p className="history-muted">Statistics: {data?.summary.updated_at ? new Date(data.summary.updated_at * 1000).toLocaleString() : "No Current Reading"}<br />
-      Blocking: {data?.blocking.updated_at ? new Date(data.blocking.updated_at * 1000).toLocaleString() : "No Current Reading"}<br />
+    <p className="history-muted">Statistics: <Freshness timestamp={data?.summary.updated_at} error={!!data && data.summary.state !== "ready"} /><br />
+      Blocking: <Freshness timestamp={data?.blocking.updated_at} error={!!data && data.blocking.state !== "ready"} /><br />
       Refreshes every 30 seconds. Atlas stores no Pi-hole history.</p>
   </section>
 }

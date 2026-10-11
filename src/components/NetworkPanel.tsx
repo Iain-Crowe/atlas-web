@@ -1,3 +1,4 @@
+import Freshness from "./Freshness"
 import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
 import StatusBanner from "./StatusBanner"
@@ -89,7 +90,7 @@ export default function NetworkPanel() {
           {quality?.packets_sent != null && <small>{quality.packets_received}/{quality.packets_sent} router replies · Every 15s</small>}
           {quality?.wifi_state === "disconnected" && <small>Wi-Fi Disconnected</small>}
           {quality?.ping_state === "no_reply" && <small>No Router Replies</small>}
-          {quality && <small>Updated {new Date(quality.observed_at * 1000).toLocaleTimeString()}</small>}
+          {quality && <small><Freshness timestamp={quality.observed_at} maxAge={35} /></small>}
         </button>
         <h3>Service Bandwidth</h3>
         <p className="history-muted">Select a service to view its history. Shared networking is measured once.</p>
@@ -101,7 +102,7 @@ export default function NetworkPanel() {
             {reading.state !== "ok" && <small>{states[reading.state] ?? reading.state}</small>}
           </button>)}
         </div>
-        {host && <p className="history-muted">Updated {new Date(host.observed_at * 1000).toLocaleTimeString()}</p>}
+        {host && <p className="history-muted"><Freshness timestamp={host.observed_at} maxAge={20} /></p>}
       </div>
       <HistoryPanel key={source} kind="network" source={source}
         title={source === "link" ? "Router & Wi-Fi History" : `${selected ? label(selected) : NETWORK_LABELS[source] ?? source} Network History`} />

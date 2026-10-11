@@ -1,3 +1,4 @@
+import Freshness from "./Freshness"
 import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
 import "./JellyfinPanel.css"
@@ -19,7 +20,6 @@ const messages: Record<State, string> = {
   unauthorized: "Jellyfin rejected the configured API key.", unavailable: "Currently unavailable.",
 }
 const size = (bytes: number | null | undefined) => bytes == null ? "Unavailable" : `${(bytes / 1024 ** 3).toLocaleString(undefined, { maximumFractionDigits: 2 })} GiB`
-const updated = (timestamp: number | null | undefined) => timestamp == null ? "No reading yet" : `Updated ${new Date(timestamp * 1000).toLocaleString()}`
 
 export default function JellyfinPanel({ serviceId }: { serviceId: number }) {
   const [data, setData] = useState<Snapshot | null>(null)
@@ -56,7 +56,7 @@ export default function JellyfinPanel({ serviceId }: { serviceId: number }) {
         {Object.entries(labels).filter(([key]) => ["MovieCount", "SeriesCount", "EpisodeCount"].includes(key) || (data?.counts.values[key] ?? 0) > 0).map(([key, label]) =>
           <div className="jellyfin-metric" key={key}><span>{label}</span><strong>{data?.counts.state === "ready" ? data.counts.values[key]?.toLocaleString() ?? "Unavailable" : "—"}</strong></div>)}
       </div>
-      <p className="history-muted">{updated(data?.counts.updated_at)} · Refreshes every 30 seconds.<br />Counts reflect Jellyfin’s indexed library. Series and episodes are separate categories.</p>
+      <p className="history-muted"><Freshness timestamp={data?.counts.updated_at} maxAge={90} error={!!data && data.counts.state !== "ready"} /> · Refreshes every 30 seconds.<br />Counts reflect Jellyfin’s indexed library. Series and episodes are separate categories.</p>
     </section>
     <section>
       <h3>Media Storage</h3>
@@ -67,8 +67,8 @@ export default function JellyfinPanel({ serviceId }: { serviceId: number }) {
       </div>
       {data && data.storage.state !== "ready" && <p className="history-muted" role="status">Media scan: {messages[data.storage.state]}</p>}
       {data && data.drive.state !== "ready" && <p className="history-muted" role="status">Data drive: {messages[data.drive.state]}</p>}
-      <p className="history-muted">{data?.media_path ?? "/srv/data/media"} · {updated(data?.storage.updated_at)}<br />Folder scans run every five minutes. Drive space refreshes every 30 seconds.<br />Folder usage includes artwork and other files; it excludes Jellyfin’s separate config/cache folders. Hard-linked files are counted once within this folder.</p>
-      <p className="history-muted">Drive: {updated(data?.drive.updated_at)} · No historical data is stored.</p>
+      <p className="history-muted">{data?.media_path ?? "/srv/data/media"} · <Freshness timestamp={data?.storage.updated_at} maxAge={900} error={!!data && data.storage.state !== "ready"} /><br />Folder scans run every five minutes. Drive space refreshes every 30 seconds.<br />Folder usage includes artwork and other files; it excludes Jellyfin’s separate config/cache folders. Hard-linked files are counted once within this folder.</p>
+      <p className="history-muted">Drive: <Freshness timestamp={data?.drive.updated_at} maxAge={90} error={!!data && data.drive.state !== "ready"} /> · No historical data is stored.</p>
     </section>
   </div>
 }
