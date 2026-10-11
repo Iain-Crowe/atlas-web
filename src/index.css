@@ -1,14 +1,14 @@
 :root {
   font-family: "Inter", system-ui, sans-serif;
   color-scheme: dark;
-  --bg: #17191c;
-  --surface: #202327;
-  --surface-hover: #282d34;
-  --border: #363c45;
-  --text: #edf0f5;
-  --text-muted: #a5aeba;
-  --accent: #91baf0;
-  --accent-soft: #25364c;
+  --bg: #17181a;
+  --surface: #202224;
+  --surface-hover: #282b2f;
+  --border: #35383d;
+  --text: #eceef1;
+  --text-muted: #a4aab3;
+  --accent: #94b8e5;
+  --accent-soft: #263446;
   --danger: #f59b9b;
   background: var(--bg);
   color: var(--text);

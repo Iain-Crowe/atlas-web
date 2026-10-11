@@ -1,8 +1,8 @@
 .pihole-panel { display: grid; gap: 1rem; margin-top: 1.5rem; min-width: 0; }
 .pihole-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
 .pihole-heading h3 { margin: 0; }
-.pihole-heading a { color: #99c8ff; overflow-wrap: anywhere; }
+.pihole-heading a { color: var(--accent); overflow-wrap: anywhere; }
 .pihole-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 1rem; }
-.pihole-metric { display: flex; flex-direction: column; gap: .4rem; border: 1px solid #3a3a3a; border-radius: .65rem; padding: 1rem; min-width: 0; }
-.pihole-metric span, .pihole-metric small { color: #a3acb9; font-size: .85rem; }
-.pihole-metric strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pihole-metric { display: flex; flex-direction: column; gap: .4rem; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; min-width: 0; }
+.pihole-metric span, .pihole-metric small { color: var(--text-muted); font-size: .85rem; }
+.pihole-metric strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

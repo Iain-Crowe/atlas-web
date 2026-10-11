@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
+import StatusBanner from "./StatusBanner"
 import HistoryPanel from "./HistoryPanel"
 
 const NETWORK_LABELS: Record<string, string> = {
@@ -67,6 +68,9 @@ export default function NetworkPanel() {
     <p className="history-muted">LAN and internet traffic. Service readings include internal Docker traffic and are not additive to the host total.</p>
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading network telemetry…</p>}
+    <StatusBanner tone={error || !host || host.state !== "ok" && host.state !== "down" ? "unavailable" : host.state === "down" || quality?.ping_state === "no_reply" || quality?.wifi_state === "disconnected" ? "attention" : "good"}
+      title={error ? "Network readings unavailable" : !host ? "Waiting for network readings" : host.state === "down" ? "Host link is down" : quality?.wifi_state === "disconnected" ? "Wi-Fi disconnected" : quality?.ping_state === "no_reply" ? "Router is not responding" : host.state === "ok" ? "Host link connected" : "Host link status unavailable"}
+      description={host?.state === "ok" ? `Receive ${rate(host.rx_mbps)} · Send ${rate(host.tx_mbps)}` : "Check the readings below for connection details."} />
     <div className="network-layout">
       <div className="network-live">
         <button type="button" className="network-host" aria-pressed={source === "host"} onClick={() => setSource("host")}>

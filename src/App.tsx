@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import "./App.css"
 import { apiFetch } from "./api"
 import LoginView from "./LoginView"
+import RuntimeSummary from "./components/RuntimeSummary"
 import MediaPanel from "./components/MediaPanel"
 import NetworkPanel from "./components/NetworkPanel"
 import HistoryPanel from "./components/HistoryPanel"
@@ -104,6 +105,7 @@ function Console({ logout }: { logout: () => void }) {
     <main id="main-content" tabIndex={-1}>
       <div className="page-heading"><div><h1>{views[view].label}</h1><p className="muted">{views[view].description}</p></div><span className="host-label">{systemStatus?.hostname ?? "Atlas host"}</span></div>
       {view === "overview" && <div className="overview-layout">
+        <RuntimeSummary services={services} loading={servicesLoading} error={servicesError} />
         <SystemOverview status={systemStatus} loading={systemLoading} error={systemError} />
         <section className="panel">
           <div className="section-heading"><div><h2>Managed services</h2><p className="muted">{servicesError ? "Status refresh unavailable" : servicesLoading ? "Checking runtime status…" : `${running} of ${services.length} running`}</p></div><button className="text-button" onClick={() => setView("services")}>View services →</button></div>
@@ -111,9 +113,9 @@ function Console({ logout }: { logout: () => void }) {
           <div className="overview-services">{services.map(service => <ServiceCard key={service.id} service={service} selected={false} onSelect={handleSelectService} />)}</div>
         </section>
         <section className="overview-shortcuts" aria-label="Explore Atlas">
-          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">Media stack</span><strong>Downloads & libraries <span aria-hidden="true">↗</span></strong><span className="muted">Queues, requests, and application status.</span></button>
-          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">Network</span><strong>Traffic & connection <span aria-hidden="true">→</span></strong><span className="muted">Bandwidth, router latency, and Wi-Fi health.</span></button>
-          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">History</span><strong>Host trends <span aria-hidden="true">→</span></strong><span className="muted">CPU, memory, temperature, and storage.</span></button>
+          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">Applications</span><strong>Media stack <span aria-hidden="true">→</span></strong><span className="muted">Queues, requests, and application status.</span></button>
+          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">Network</span><strong>Network monitoring <span aria-hidden="true">→</span></strong><span className="muted">Bandwidth, router latency, and Wi-Fi health.</span></button>
+          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">History</span><strong>Telemetry history <span aria-hidden="true">→</span></strong><span className="muted">CPU, memory, temperature, and storage.</span></button>
         </section>
       </div>}
       {view === "services" && <div className="dashboard">

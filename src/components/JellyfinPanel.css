@@ -1,6 +1,6 @@
 .jellyfin-panel { display: grid; gap: 1.5rem; margin-top: 1.5rem; min-width: 0; }
 .jellyfin-panel h3 { margin: 0 0 1rem; }
 .jellyfin-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 1rem; }
-.jellyfin-metric { display: flex; flex-direction: column; gap: .4rem; border: 1px solid #3a3a3a; border-radius: .65rem; padding: 1rem; min-width: 0; }
-.jellyfin-metric span { color: #a3acb9; font-size: .85rem; }
-.jellyfin-metric strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.jellyfin-metric { display: flex; flex-direction: column; gap: .4rem; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; min-width: 0; }
+.jellyfin-metric span { color: var(--text-muted); font-size: .85rem; }
+.jellyfin-metric strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

@@ -158,8 +158,15 @@ function ServiceDetail({
             </div>
           </div>
 
+          {actionError && (
+            <p className="action-error" role="alert">
+              {actionError}
+            </p>
+          )}
+
           <div className={service.name === "minecraft" ? "service-detail-body has-history" : "service-detail-body"}>
           <div className="service-live-telemetry">
+          {minecraftError && <p className="history-warning" role="status">{minecraftError}</p>}
           <div className="detail-grid">
             <div>
               <span>Name</span>
@@ -253,7 +260,6 @@ function ServiceDetail({
               )}
           </div>
 
-          {minecraftError && <p className="history-warning" role="status">{minecraftError}</p>}
           </div>
           {service.name === "minecraft" && <HistoryPanel key={service.id} kind="minecraft" serviceId={service.id} />}
           </div>
@@ -261,11 +267,7 @@ function ServiceDetail({
           {service.name === "jellyfin" && <JellyfinPanel key={service.id} serviceId={service.id} />}
           {service.name === "pihole" && <PiHolePanel key={service.id} serviceId={service.id} />}
 
-          {actionError && (
-            <p className="action-error" role="alert">
-              {actionError}
-            </p>
-          )}
+
         </>
       ) : (
         <div className="empty-state">

@@ -1,3 +1,4 @@
+import StatusBanner from "./StatusBanner"
 import type { SystemStatus } from "../types"
 
 type SystemOverviewProps = {
@@ -75,23 +76,29 @@ function SystemOverview({
     ? getTemperatureTone(status.cpu.temperature_c)
     : "neutral"
 
+  const highReadings = status && !error ? [
+    ...(cpuUsagePercent !== null && cpuUsagePercent >= 85 ? ["CPU utilization"] : []),
+    ...(status.cpu.temperature_c !== null && status.cpu.temperature_c >= 75 ? ["CPU temperature"] : []),
+    ...(memoryUsagePercent >= 85 ? ["memory usage"] : []),
+    ...(diskUsagePercent >= 85 ? ["disk usage"] : []),
+  ] : []
+  const uptime = status && Number.isFinite(status.uptime_seconds)
+    ? `${Math.floor(status.uptime_seconds / 86400)}d ${Math.floor(status.uptime_seconds % 86400 / 3600)}h uptime`
+    : null
+
   return (
     <section className="panel system-overview">
-      <h2>System Overview</h2>
+      <div className="section-heading host-heading"><div><h2>Host resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><span className="section-meta">5s refresh</span></div>
+      {highReadings.length > 0 && <StatusBanner tone="attention" title="Elevated resource readings" description={highReadings.join(" · ")} />}
 
       {loading && <p role="status">Loading system status…</p>}
       {error && <p className="history-warning" role="status">Host readings may be out of date. {error}</p>}
 
       {status && (
         <div className="system-stats enhanced">
-          <div className="stat-row host-row">
-            <span>Host</span>
-            <strong>{status.hostname}</strong>
-          </div>
-
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>CPU</span>
+              <span>CPU utilization</span>
               <strong className={`metric-value ${cpuUsageTone}`}>
                 {cpuUsagePercent === null ? "Unavailable / warming up" : `${cpuUsagePercent.toFixed(1)}%`}
               </strong>
@@ -107,7 +114,7 @@ function SystemOverview({
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>Temperature</span>
+              <span>CPU temperature</span>
               <strong
                 className={`metric-value ${cpuTemperatureTone}`}
               >
@@ -141,8 +148,7 @@ function SystemOverview({
                   memoryUsagePercent
                 )}`}
               >
-                {memoryUsedMb.toFixed(0)} /{" "}
-                {status.memory.total_mb.toFixed(0)} MB
+                {(memoryUsedMb / 1024).toFixed(1)} <small>/ {(status.memory.total_mb / 1024).toFixed(1)} GiB</small>
               </strong>
             </div>
 
@@ -158,14 +164,13 @@ function SystemOverview({
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>Disk</span>
+              <span>Data disk</span>
               <strong
                 className={`metric-value ${getUsageTone(
                   diskUsagePercent
                 )}`}
               >
-                {status.disk.used_gb.toFixed(1)} /{" "}
-                {status.disk.total_gb.toFixed(1)} GB
+                {status.disk.used_gb.toFixed(1)} <small>/ {status.disk.total_gb.toFixed(1)} GB</small>
               </strong>
             </div>
 
@@ -180,7 +185,7 @@ function SystemOverview({
           </div>
 
           <div className="stat-row">
-            <span>Load</span>
+            <span>Load · 1 minute</span>
             <strong>{status.load_average[0].toFixed(2)}</strong>
           </div>
         </div>

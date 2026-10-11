@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import "./MediaPanel.css"
+import StatusBanner from "./StatusBanner"
 import { apiFetch } from "../api"
 
 type Reading<T> = { state: string; updated_at: number | null; values: T | null }
@@ -62,12 +63,22 @@ export default function MediaPanel() {
     ['Queue Warnings', fmt(sum(tv?.queue_warnings, movies?.queue_warnings))], ['Queue Errors', fmt(sum(tv?.queue_errors, movies?.queue_errors))],
     ['Pending Requests', fmt(requests?.pending)], ['Application Warnings', fmt(warnings)], ['Application Errors', fmt(errors)],
   ]
+  const alertCount = errors === null || warnings === null || unhealthy === null ? null : errors + warnings + unhealthy
+  const notRunning = containers ? Object.keys(containers).length - (running ?? 0) : null
+  const metricGroups = [
+    { title: "Downloads", metrics: metrics.slice(2, 11) },
+    { title: "Library pipeline", metrics: metrics.slice(11, 16) },
+    { title: "Requests & alerts", metrics: metrics.slice(16) },
+  ]
   return <section className="panel service-detail media-panel">
     <div className="media-heading"><h2>Media Stack</h2><span className="history-muted">Live Aggregates · 30-Second Refresh</span></div>
-    {error && <p role="status">{error}</p>}
+    <StatusBanner tone={error || alertCount === null ? "unavailable" : alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
+      title={error ? "Media telemetry unavailable" : alertCount === null ? "Application status incomplete" : alertCount > 0 ? `${alertCount} application ${alertCount === 1 ? "alert" : "alerts"}` : (notRunning ?? 0) > 0 ? "Some media containers are not running" : "No application alerts reported"}
+      description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />
+    {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}
     {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <span key={name}>{names[name] ?? name}: {c.state}{c.health !== 'none' ? ` · ${c.health}` : ''}</span>)}</div>}
-    <div className="media-metrics">{metrics.map(([label, text]) => <div className="media-metric" key={label}><span>{label}</span><strong>{text}</strong></div>)}</div>
+    {metricGroups.map(group => <section className="metric-group" key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text]) => <div className="media-metric" key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
     <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? new Date(data[key].updated_at! * 1000).toLocaleTimeString() : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
     <p className="history-muted">Torrent states and movie/episode queues overlap; they are not combined into a download total. Missing movies may include unreleased titles. Application alerts cover Sonarr, Radarr and Prowlarr. Gluetun’s container health is not a VPN leak test.</p>
     <nav className="media-links" aria-label="Media Services">{['sonarr', 'radarr', 'prowlarr', 'seerr', 'qbittorrent'].map(name => <a key={name} href={`https://${name}.atlas.home.arpa/`} target="_blank" rel="noopener noreferrer">{names[name]} ↗</a>)}</nav>
