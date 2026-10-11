@@ -19,6 +19,17 @@ const fmt = (n: number | null | undefined) => n == null ? "—" : n.toLocaleStri
 const rate = (n: number | undefined) => n == null ? "—" : `${(n * 8 / 1e6).toFixed(2)} Mbps`
 const sum = (a: number | undefined, b: number | undefined) => a == null || b == null ? null : a + b
 
+type MetricTone = "neutral" | "activity" | "library" | "good" | "warning" | "danger"
+const activityTone = (n: number | null | undefined, tone: MetricTone = "activity"): MetricTone =>
+  n == null || !Number.isFinite(n) || n <= 0 ? "neutral" : tone
+const alertTone = (n: number | null | undefined, tone: "warning" | "danger"): MetricTone =>
+  n == null || !Number.isFinite(n) ? "neutral" : n > 0 ? tone : "good"
+const containerTone = (state: string, health: string): MetricTone => {
+  if (health === "unhealthy" || state === "dead") return "danger"
+  if (["paused", "restarting", "exited"].includes(state) || health === "starting") return "warning"
+  return state === "running" ? "good" : "neutral"
+}
+
 export default function MediaPanel() {
   const [data, setData] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,33 +63,45 @@ export default function MediaPanel() {
   const unhealthy = containers ? Object.values(containers).filter(c => c.health === 'unhealthy').length : null
   const warnings = tv && movies && indexers ? tv.warnings + movies.warnings + indexers.warnings : null
   const errors = tv && movies && indexers ? tv.errors + movies.errors + indexers.errors : null
-  const metrics: [string, string][] = [
-    ['Running Containers', running == null ? '—' : `${running} / ${Object.keys(containers ?? {}).length}`], ['Unhealthy Containers', fmt(unhealthy)],
-    ['Download Speed', rate(download?.download_bps)], ['Upload Speed', rate(download?.upload_bps)],
-    ['Downloading', fmt(download?.downloading)], ['Queued Torrents', fmt(download?.queued)], ['Seeding', fmt(download?.seeding)],
-    ['Stalled Downloads', fmt(download?.stalled)], ['Torrent Errors', fmt(download?.errors)], ['Stopped Torrents', fmt(download?.stopped)],
-    ['Other Torrent States', fmt(download?.other)], ['Monitored Movies Without Files', fmt(movies?.missing)],
-    ['Missing Monitored Episodes', fmt(tv?.missing)], ['Movie Queue Items', fmt(movies?.queue_items)], ['Episode Queue Items', fmt(tv?.queue_items)],
-    ['Awaiting Import / Importing', fmt(sum(tv?.awaiting_import, movies?.awaiting_import))],
-    ['Queue Warnings', fmt(sum(tv?.queue_warnings, movies?.queue_warnings))], ['Queue Errors', fmt(sum(tv?.queue_errors, movies?.queue_errors))],
-    ['Pending Requests', fmt(requests?.pending)], ['Application Warnings', fmt(warnings)], ['Application Errors', fmt(errors)],
+  const metrics: [string, string, MetricTone][] = [
+    ['Running Containers', running == null ? '—' : `${running} / ${Object.keys(containers ?? {}).length}`, 'neutral'],
+    ['Unhealthy Containers', fmt(unhealthy), alertTone(unhealthy, 'danger')],
+    ['Download Speed', rate(download?.download_bps), activityTone(download?.download_bps)],
+    ['Upload Speed', rate(download?.upload_bps), activityTone(download?.upload_bps)],
+    ['Downloading', fmt(download?.downloading), activityTone(download?.downloading)],
+    ['Queued Torrents', fmt(download?.queued), activityTone(download?.queued)],
+    ['Seeding', fmt(download?.seeding), activityTone(download?.seeding, 'good')],
+    ['Stalled Downloads', fmt(download?.stalled), alertTone(download?.stalled, 'warning')],
+    ['Torrent Errors', fmt(download?.errors), alertTone(download?.errors, 'danger')],
+    ['Stopped Torrents', fmt(download?.stopped), 'neutral'],
+    ['Other Torrent States', fmt(download?.other), 'neutral'],
+    ['Monitored Movies Without Files', fmt(movies?.missing), activityTone(movies?.missing, 'library')],
+    ['Missing Monitored Episodes', fmt(tv?.missing), activityTone(tv?.missing, 'library')],
+    ['Movie Queue Items', fmt(movies?.queue_items), activityTone(movies?.queue_items, 'library')],
+    ['Episode Queue Items', fmt(tv?.queue_items), activityTone(tv?.queue_items, 'library')],
+    ['Awaiting Import / Importing', fmt(sum(tv?.awaiting_import, movies?.awaiting_import)), activityTone(sum(tv?.awaiting_import, movies?.awaiting_import), 'library')],
+    ['Queue Warnings', fmt(sum(tv?.queue_warnings, movies?.queue_warnings)), alertTone(sum(tv?.queue_warnings, movies?.queue_warnings), 'warning')],
+    ['Queue Errors', fmt(sum(tv?.queue_errors, movies?.queue_errors)), alertTone(sum(tv?.queue_errors, movies?.queue_errors), 'danger')],
+    ['Pending Requests', fmt(requests?.pending), activityTone(requests?.pending)],
+    ['Application Warnings', fmt(warnings), alertTone(warnings, 'warning')],
+    ['Application Errors', fmt(errors), alertTone(errors, 'danger')],
   ]
   const alertCount = errors === null || warnings === null || unhealthy === null ? null : errors + warnings + unhealthy
   const notRunning = containers ? Object.keys(containers).length - (running ?? 0) : null
   const metricGroups = [
-    { title: "Downloads", metrics: metrics.slice(2, 11) },
-    { title: "Library Pipeline", metrics: metrics.slice(11, 16) },
-    { title: "Requests & Alerts", metrics: metrics.slice(16) },
+    { title: "Downloads", accent: "activity", metrics: metrics.slice(2, 11) },
+    { title: "Library Pipeline", accent: "library", metrics: metrics.slice(11, 16) },
+    { title: "Requests & Alerts", accent: "warning", metrics: metrics.slice(16) },
   ]
-  return <section className="panel service-detail media-panel">
+  return <section className="panel service-detail media-panel" data-alert-severity={(errors ?? 0) > 0 || (unhealthy ?? 0) > 0 ? "danger" : "normal"}>
     <div className="media-heading"><h2>Media Stack</h2><span className="history-muted">Live Aggregates · 30-Second Refresh</span></div>
     <StatusBanner tone={error || alertCount === null ? "unavailable" : alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
       title={error ? "Media Telemetry Unavailable" : alertCount === null ? "Application Status Incomplete" : alertCount > 0 ? `${alertCount} Application ${alertCount === 1 ? "Alert" : "Alerts"}` : (notRunning ?? 0) > 0 ? "Some Media Containers Are Not Running" : "No Application Alerts Reported"}
       description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}
-    {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <span key={name}>{names[name] ?? name}: {c.state}{c.health !== 'none' ? ` · ${c.health}` : ''}</span>)}</div>}
-    {metricGroups.map(group => <section className="metric-group" key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text]) => <div className="media-metric" key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
+    {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <span key={name} className={`media-service media-tone-${containerTone(c.state, c.health)}`}>{names[name] ?? name}: {c.state}{c.health !== 'none' ? ` · ${c.health}` : ''}</span>)}</div>}
+    {metricGroups.map(group => <section className={`metric-group media-group-${group.accent}`} key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text, tone]) => <div className={`media-metric media-tone-${tone}`} key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
     <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? new Date(data[key].updated_at! * 1000).toLocaleTimeString() : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
     <p className="history-muted">Torrent states and movie/episode queues overlap; they are not combined into a download total. Missing movies may include unreleased titles. Application alerts cover Sonarr, Radarr and Prowlarr. Gluetun’s container health is not a VPN leak test.</p>
     <nav className="media-links" aria-label="Media Services">{['sonarr', 'radarr', 'prowlarr', 'seerr', 'qbittorrent'].map(name => <a key={name} href={`https://${name}.atlas.home.arpa/`} target="_blank" rel="noopener noreferrer">{names[name]} ↗</a>)}</nav>

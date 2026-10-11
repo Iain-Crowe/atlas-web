@@ -2,10 +2,37 @@
 .media-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
 .media-heading h2 { margin: 0; }
 .media-services, .media-readings, .media-links { display: flex; flex-wrap: wrap; gap: .65rem 1rem; margin: 1rem 0; }
-.media-services span { padding: .35rem .65rem; border: 1px solid var(--border); border-radius: .4rem; font-size: .85rem; }
+.media-services .media-service { padding: .35rem .65rem; border: 1px solid var(--border); border-radius: .4rem; font-size: .85rem; }
 .media-readings { color: var(--text-muted); font-size: .8rem; }
 .media-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr)); gap: .8rem; }
 .media-metric { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
 .media-metric span { color: var(--text-muted); font-size: .85rem; }
 .media-metric strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .media-links a { color: var(--accent); }
+
+/* Semantic accents remain local to Media Stack. Labels carry the meaning as well. */
+.media-panel { --media-blue: #91bdf2; --media-violet: #c0acf0; --media-green: #8bceaa; --media-amber: #efc17c; --media-red: #efa0a7; }
+.media-tone-neutral { --media-tone: var(--text-muted); --media-tint: transparent; }
+.media-tone-activity { --media-tone: var(--media-blue); --media-tint: #91bdf20b; }
+.media-tone-library { --media-tone: var(--media-violet); --media-tint: #c0acf00b; }
+.media-tone-good { --media-tone: var(--media-green); --media-tint: #8bceaa08; }
+.media-tone-warning { --media-tone: var(--media-amber); --media-tint: #efc17c12; }
+.media-tone-danger { --media-tone: var(--media-red); --media-tint: #efa0a714; }
+.media-panel .media-metric { background: var(--media-tint); border-top: 2px solid var(--media-tone); }
+.media-panel .media-metric strong { color: var(--media-tone); }
+.media-panel .media-metric.media-tone-neutral { border-top-color: var(--border); }
+.media-panel .media-services .media-service { display: inline-flex; align-items: center; gap: .45rem; background: var(--media-tint); color: var(--media-tone); }
+.media-service::before { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--media-tone); }
+.media-panel .metric-group h3 { display: flex; align-items: center; gap: .65rem; color: var(--group-accent); }
+.media-panel .metric-group h3::before { content: ""; width: 3px; height: 14px; border-radius: 2px; background: currentColor; }
+.media-group-activity { --group-accent: var(--media-blue); }
+.media-group-library { --group-accent: var(--media-violet); }
+.media-group-warning { --group-accent: var(--media-amber); }
+.media-panel .status-banner.tone-good { background: #8bceaa08; border-color: #8bceaa40; }
+.media-panel .status-banner.tone-attention { background: #efc17c0b; border-color: #efc17c55; }
+.media-panel .status-banner.tone-attention strong { color: var(--media-amber); }
+.media-panel[data-alert-severity="danger"] .status-banner { background: #efa0a70b; border-color: #efa0a755; }
+.media-panel[data-alert-severity="danger"] .status-banner strong,
+.media-panel[data-alert-severity="danger"] .status-banner .status-symbol { color: var(--media-red); }
+.media-panel .media-links a { text-decoration: none; padding: .45rem .65rem; border: 1px solid #91bdf23d; background: #91bdf208; border-radius: 5px; }
+.media-panel .media-links a:hover { background: #91bdf218; border-color: var(--media-blue); }
