@@ -11,12 +11,12 @@ export default function RuntimeSummary({ services, loading, error }: Props) {
   const allRunning = known && running === services.length
   return <section className="panel runtime-summary" aria-label="Service runtime summary">
     <StatusBanner tone={!known ? "unavailable" : allRunning ? "good" : "attention"}
-      title={error ? "Service status unavailable" : loading ? "Checking service status" : services.length === 0 ? "No managed services" : allRunning ? "All managed services are running" : `${services.length - running} ${services.length - running === 1 ? "service is" : "services are"} not running`}
+      title={error ? "Service Status Unavailable" : loading ? "Checking Service Status" : services.length === 0 ? "No Managed Services" : allRunning ? "All Managed Services Are Running" : `${services.length - running} ${services.length - running === 1 ? "Service Is" : "Services Are"} Not Running`}
       description={error ? "The last reading could not be refreshed." : loading ? "Waiting for the first reading." : `${services.length} registered services · Container runtime status`}>
       <dl className="runtime-counts">
         <div><dt>Running</dt><dd>{known ? running : "—"}</dd></div>
         <div><dt>Stopped</dt><dd>{known ? stopped : "—"}</dd></div>
-        <div><dt>Other states</dt><dd>{known ? other : "—"}</dd></div>
+        <div><dt>Other States</dt><dd>{known ? other : "—"}</dd></div>
       </dl>
     </StatusBanner>
   </section>

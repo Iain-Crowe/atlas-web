@@ -35,7 +35,7 @@ export default function MediaPanel() {
         const snapshot: Snapshot = await response.json()
         if (!disposed) { setData(snapshot); setError(null) }
       } catch (reason) {
-        if (!disposed) { setData(null); setError(reason instanceof Error ? reason.message : "Media telemetry unavailable") }
+        if (!disposed) { setData(null); setError(reason instanceof Error ? reason.message : "Media Telemetry Unavailable") }
       } finally {
         clearTimeout(deadline)
         if (!disposed) timer = setTimeout(() => void load(), 30000)
@@ -67,13 +67,13 @@ export default function MediaPanel() {
   const notRunning = containers ? Object.keys(containers).length - (running ?? 0) : null
   const metricGroups = [
     { title: "Downloads", metrics: metrics.slice(2, 11) },
-    { title: "Library pipeline", metrics: metrics.slice(11, 16) },
-    { title: "Requests & alerts", metrics: metrics.slice(16) },
+    { title: "Library Pipeline", metrics: metrics.slice(11, 16) },
+    { title: "Requests & Alerts", metrics: metrics.slice(16) },
   ]
   return <section className="panel service-detail media-panel">
     <div className="media-heading"><h2>Media Stack</h2><span className="history-muted">Live Aggregates · 30-Second Refresh</span></div>
     <StatusBanner tone={error || alertCount === null ? "unavailable" : alertCount > 0 || (notRunning ?? 0) > 0 ? "attention" : "good"}
-      title={error ? "Media telemetry unavailable" : alertCount === null ? "Application status incomplete" : alertCount > 0 ? `${alertCount} application ${alertCount === 1 ? "alert" : "alerts"}` : (notRunning ?? 0) > 0 ? "Some media containers are not running" : "No application alerts reported"}
+      title={error ? "Media Telemetry Unavailable" : alertCount === null ? "Application Status Incomplete" : alertCount > 0 ? `${alertCount} Application ${alertCount === 1 ? "Alert" : "Alerts"}` : (notRunning ?? 0) > 0 ? "Some Media Containers Are Not Running" : "No Application Alerts Reported"}
       description={containers ? `${running} of ${Object.keys(containers).length} containers running · ${unhealthy} unhealthy` : "Waiting for container readings."} />
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}

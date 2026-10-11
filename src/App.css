@@ -30,7 +30,7 @@
 .shortcut:hover { border-color: var(--accent); background: var(--surface-hover); }
 .shortcut strong { display: flex; justify-content: space-between; gap: .75rem; font-size: 1rem; font-weight: 500; }
 .shortcut .muted { font-size: .85rem; line-height: 1.6; }
-.eyebrow { color: var(--text-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
+.eyebrow { color: var(--text-muted); font-size: .7rem; letter-spacing: .04em; font-weight: 600; }
 .dashboard { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 .sidebar { display: grid; gap: .6rem; align-content: start; }
 .sidebar > h2 { margin: 0 0 .4rem; padding: 0 .25rem; }

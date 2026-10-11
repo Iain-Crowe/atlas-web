@@ -88,8 +88,8 @@ function SystemOverview({
 
   return (
     <section className="panel system-overview">
-      <div className="section-heading host-heading"><div><h2>Host resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><span className="section-meta">5s refresh</span></div>
-      {highReadings.length > 0 && <StatusBanner tone="attention" title="Elevated resource readings" description={highReadings.join(" · ")} />}
+      <div className="section-heading host-heading"><div><h2>Host Resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><span className="section-meta">5s refresh</span></div>
+      {highReadings.length > 0 && <StatusBanner tone="attention" title="Elevated Resource Readings" description={highReadings.join(" · ")} />}
 
       {loading && <p role="status">Loading system status…</p>}
       {error && <p className="history-warning" role="status">Host readings may be out of date. {error}</p>}
@@ -98,7 +98,7 @@ function SystemOverview({
         <div className="system-stats enhanced">
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>CPU utilization</span>
+              <span>CPU Utilization</span>
               <strong className={`metric-value ${cpuUsageTone}`}>
                 {cpuUsagePercent === null ? "Unavailable / warming up" : `${cpuUsagePercent.toFixed(1)}%`}
               </strong>
@@ -114,7 +114,7 @@ function SystemOverview({
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>CPU temperature</span>
+              <span>CPU Temperature</span>
               <strong
                 className={`metric-value ${cpuTemperatureTone}`}
               >
@@ -164,7 +164,7 @@ function SystemOverview({
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>Data disk</span>
+              <span>Data Disk</span>
               <strong
                 className={`metric-value ${getUsageTone(
                   diskUsagePercent
@@ -185,7 +185,7 @@ function SystemOverview({
           </div>
 
           <div className="stat-row">
-            <span>Load · 1 minute</span>
+            <span>Load · 1 Minute</span>
             <strong>{status.load_average[0].toFixed(2)}</strong>
           </div>
         </div>

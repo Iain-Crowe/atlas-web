@@ -108,18 +108,18 @@ function Console({ logout }: { logout: () => void }) {
         <RuntimeSummary services={services} loading={servicesLoading} error={servicesError} />
         <SystemOverview status={systemStatus} loading={systemLoading} error={systemError} />
         <section className="panel">
-          <div className="section-heading"><div><h2>Managed services</h2><p className="muted">{servicesError ? "Status refresh unavailable" : servicesLoading ? "Checking runtime status…" : `${running} of ${services.length} running`}</p></div><button className="text-button" onClick={() => setView("services")}>View services →</button></div>
+          <div className="section-heading"><div><h2>Managed Services</h2><p className="muted">{servicesError ? "Status refresh unavailable" : servicesLoading ? "Checking runtime status…" : `${running} of ${services.length} running`}</p></div><button className="text-button" onClick={() => setView("services")}>View services →</button></div>
           {serviceFeedback}
           <div className="overview-services">{services.map(service => <ServiceCard key={service.id} service={service} selected={false} onSelect={handleSelectService} />)}</div>
         </section>
         <section className="overview-shortcuts" aria-label="Explore Atlas">
-          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">Applications</span><strong>Media stack <span aria-hidden="true">→</span></strong><span className="muted">Queues, requests, and application status.</span></button>
-          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">Network</span><strong>Network monitoring <span aria-hidden="true">→</span></strong><span className="muted">Bandwidth, router latency, and Wi-Fi health.</span></button>
-          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">History</span><strong>Telemetry history <span aria-hidden="true">→</span></strong><span className="muted">CPU, memory, temperature, and storage.</span></button>
+          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">Applications</span><strong>Media Stack <span aria-hidden="true">→</span></strong><span className="muted">Queues, requests, and application status.</span></button>
+          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">Network</span><strong>Network Monitoring <span aria-hidden="true">→</span></strong><span className="muted">Bandwidth, router latency, and Wi-Fi health.</span></button>
+          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">History</span><strong>Telemetry History <span aria-hidden="true">→</span></strong><span className="muted">CPU, memory, temperature, and storage.</span></button>
         </section>
       </div>}
       {view === "services" && <div className="dashboard">
-        <aside className="sidebar" aria-label="Service selection"><h2 className="eyebrow">Managed services</h2>{serviceFeedback}
+        <aside className="sidebar" aria-label="Service selection"><h2 className="eyebrow">Managed Services</h2>{serviceFeedback}
           {services.map(service => <ServiceCard key={service.id} service={service} selected={selection === service.id} onSelect={handleSelectService} />)}
           <h2 className="eyebrow sidebar-group">Applications</h2>
           <button className={`service-card ${selection === "media" ? "selected" : ""}`} aria-pressed={selection === "media"} onClick={() => { setSelection("media"); setActionError(null) }}><span className="service-name">Media Stack</span><span className="muted">Aggregate telemetry</span></button>
