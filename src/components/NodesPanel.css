@@ -1,0 +1,31 @@
+.node-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.node-grid.node-single { grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
+.node-card { border: 1px solid var(--border); border-top: 2px solid var(--accent); border-radius: 3px; padding: 1.1rem; background: var(--surface); min-width: 0; }
+.node-card header { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
+.node-card h3 { margin: .4rem 0 0; font-size: 1.05rem; }
+.node-card h3 small { font-size: .75rem; color: var(--text-muted); margin-left: .35rem; font-weight: 400; }
+.node-card header > span { font-size: .72rem; white-space: nowrap; }
+.node-fresh { color: #8bc3b0; }
+.node-stale { color: #dfb97c; }
+.node-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: .9rem 0; margin: .7rem 0 0; border-top: 1px solid var(--border); }
+.node-metrics dt { color: var(--text-muted); font-size: .72rem; margin-bottom: .4rem; }
+.node-metrics dd { margin: 0; font-variant-numeric: tabular-nums; font: .95rem var(--font-reading); }
+.node-metrics small { color: var(--text-muted); font-size: .72rem; }
+.node-dependencies { margin-bottom: .8rem; }
+.node-dependencies p { display: flex; justify-content: space-between; gap: .75rem; font-size: .78rem; margin: .5rem 0; }
+.node-dependencies p span { color: var(--text-muted); overflow-wrap: anywhere; }
+.node-dependencies strong { font-weight: 500; text-align: right; }
+.node-card a { color: var(--accent); font-size: .78rem; text-decoration: none; display: inline-flex; margin-top: .25rem; }
+.node-card a:focus-visible { outline: 2px solid #8ebde8; outline-offset: 4px; }
+@media (max-width: 760px) { .node-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* The service theme resets panel margins; explicitly separate the VM card. */
+.service-themed .nodes-panel + .jellyfin-panel { margin-top: 1.75rem; }
+.service-themed .node-grid.node-single { margin-top: .75rem; }
+.node-single .node-dependencies { margin-bottom: 0; }
+.node-metrics dd { overflow-wrap: anywhere; }
+@container service-detail (max-width: 480px) {
+  .node-card header { flex-wrap: wrap; }
+  .node-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .node-metrics > div:last-child { grid-column: 1 / -1; }
+}

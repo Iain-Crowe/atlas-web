@@ -1,3 +1,4 @@
+import useSessionPreference from "../hooks/useSessionPreference"
 import Freshness from "./Freshness"
 import useNow from "../hooks/useNow"
 import { useId, useState, type PointerEvent, type MouseEvent } from "react"
@@ -8,6 +9,7 @@ type Metric = { key: string; label: string; unit: string; scale?: number; ceilin
 const LINK: Metric[] = [
   { key: "latency_ms", label: "Router Latency", unit: "ms" },
   { key: "loss_percent", label: "Router Probe Loss", unit: "%", ceiling: 100 },
+  { key: "link_speed_mbps", label: "Ethernet Link Speed", unit: "Mbps" },
   { key: "signal_dbm", label: "Wi-Fi Signal", unit: "dBm", floor: -100, ceiling: -20 },
   { key: "rx_link_mbps", label: "Wi-Fi Receive Link Rate", unit: "Mbps" },
   { key: "tx_link_mbps", label: "Wi-Fi Send Link Rate", unit: "Mbps" },
@@ -48,7 +50,8 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
   const y = (value: number) => 114 - (value * scale - floor) / (ceiling - floor) * 92
   const path = values.map((value, index) => {
     if (value?.mean == null) return ""
-    const command = index > 0 && values[index - 1]?.mean != null ? "L" : "M"
+    const sameInterface = JSON.stringify(points[index].interfaces ?? []) === JSON.stringify(points[index - 1]?.interfaces ?? [])
+    const command = index > 0 && values[index - 1]?.mean != null && sameInterface ? "L" : "M"
     return `${command}${x(index).toFixed(2)},${y(value.mean).toFixed(2)}`
   }).join(" ")
   const nearest = (timestamp: number) => points.reduce((best, point, i) => Math.abs(point.timestamp - timestamp) < Math.abs(points[best].timestamp - timestamp) ? i : best, 0)
@@ -67,7 +70,7 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
   return <article className="history-chart">
     <div className="history-chart-heading"><h4>{metric.label}</h4><strong>{format(current?.mean)}</strong></div>
     {available ? <>
-      <div className="chart-tools"><span>Hover or tap to inspect</span><button type="button" className="text-button" aria-pressed={selected === null} onClick={() => { setSelected(null); setHovered(null) }}>Latest</button></div>
+      <div className="chart-tools"><span>{selected === null ? "Latest Interval" : "Selected Interval"}</span><button type="button" className="text-button" aria-pressed={selected === null} onClick={() => { setSelected(null); setHovered(null) }}>Latest</button></div>
       <svg viewBox="0 0 600 140" role="img" aria-labelledby={titleId}
         onPointerMove={event => { if (event.pointerType === "mouse") inspect(event, false) }}
         onPointerLeave={() => setHovered(null)} onClick={event => inspect(event, true)}>
@@ -80,7 +83,7 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
         {points[index] && <line x1={x(index)} x2={x(index)} y1="22" y2="114" className="history-cursor" />}
         <path d={path} fill="none" className="history-line" />
         {values.map((value, i) => value?.mean == null ? null : <circle key={points[i].timestamp}
-          cx={x(i)} cy={y(value.mean)} r={i === index ? 4 : 1.8}
+          cx={x(i)} cy={y(value.mean)} r={i === index ? 3.5 : value.count < points[i].expected ? 2 : 0}
           className={value.count < points[i].expected ? "history-partial" : "history-dot"}>
           <title>{formatTime(points[i].timestamp)}: {format(value.mean)}; min {format(value.minimum)}; max {format(value.maximum)}; {value.count}/{points[i].expected} readings</title>
         </circle>)}
@@ -89,15 +92,16 @@ function MetricChart({ history, metric }: { history: TelemetryHistory; metric: M
         aria-label={`Inspect ${metric.label} history`} aria-valuetext={`${points[index] ? formatTime(points[index].timestamp) : "No samples"}: ${format(current?.mean)}`} onChange={event => { setSelected(points[Number(event.target.value)].timestamp); setHovered(null) }} />
       <div className="history-chart-detail">
         <span>{points[index] ? formatTime(points[index].timestamp) : "No samples"}</span>
-        <span>Min {format(current?.minimum)} · Max {format(current?.maximum)}</span>
-        <span>{current?.count ?? 0}/{points[index]?.expected ?? 0} readings in this interval</span>
+        <span>{points[index]?.mixed_interfaces ? "Interface Changed Within Interval" : points[index]?.interfaces?.join(", ") || (history.kind === "network" ? "Interface Not Recorded" : "")}</span>
+        <span className="chart-extents">Min {format(current?.minimum)} · Max {format(current?.maximum)}</span>
+        <span>{current?.count ?? 0}/{points[index]?.expected ?? 0} samples</span>
       </div>
     </> : <p className="history-muted">No readings in this period.</p>}
   </article>
 }
 
-export default function HistoryPanel({ kind, serviceId, source, title }: { kind: "host" | "minecraft" | "network"; serviceId?: number; source?: string; title?: string }) {
-  const [range, setRange] = useState<HistoryRange>("1h")
+export default function HistoryPanel({ kind, serviceId, source, title, linkType }: { linkType?: "ethernet" | "wifi" | "unknown"; kind: "host" | "minecraft" | "network"; serviceId?: number; source?: string; title?: string }) {
+  const [range, setRange] = useSessionPreference<HistoryRange>("atlas.history.range", ["1h", "6h", "24h", "7d"], "1h")
   const path = kind === "network" ? `/network/${encodeURIComponent(source ?? "host")}/history` : kind === "host" ? "/system/history" : `/services/${serviceId}/minecraft/history`
   const { data, error, loading } = useHistory(path, range)
   const now = useNow()
@@ -114,9 +118,11 @@ export default function HistoryPanel({ kind, serviceId, source, title }: { kind:
     {error && <p role="status" className="history-warning">{error}. Displayed history may be stale.</p>}
     {data && <>
       <Freshness timestamp={data.last_sample_at} maxAge={data.sample_seconds * 3} error={!!error} label="Last Sample" />
-      <p className="history-muted">{formatTime(data.start)} – {formatTime(data.end)} · Local time<br />
+      <details className="chart-notes"><summary>Collection Details</summary>
+        <p>{formatTime(data.start)} – {formatTime(data.end)} · Local time<br />
         Samples every {data.sample_seconds}s · {data.bucket_seconds}s averages · {data.retention_days}-day retention.
-        Gaps mean no reading; amber dots mark incomplete intervals.</p>
+        Gaps mean no reading; amber dots mark incomplete intervals. Hover, tap, or use the slider to inspect.</p>
+      </details>
       {stale && <p role="status" className="history-warning">{data.last_sample_at === null
         ? "Waiting for the collector’s first sample."
         : `Collector is behind. Last sample: ${formatTime(data.last_sample_at)}.`}</p>}
@@ -127,8 +133,11 @@ export default function HistoryPanel({ kind, serviceId, source, title }: { kind:
         Received {((data.received_bytes ?? 0) / 1024 ** 3).toLocaleString(undefined, { maximumFractionDigits: 3 })} GiB · Sent {((data.sent_bytes ?? 0) / 1024 ** 3).toLocaleString(undefined, { maximumFractionDigits: 3 })} GiB<br />
         <small>{((data.covered_seconds ?? 0) / 60).toLocaleString(undefined, { maximumFractionDigits: 1 })} minutes measured in this period. Gaps and partial boundary intervals are excluded.</small>
       </p>}
-      {source === "link" && <p className="history-muted">Five router probes per reading. Loss averages are weighted by probes sent. Wi-Fi link rates are radio rates, not available internet bandwidth. Missing driver readings appear as gaps.</p>}
-      <div className="history-grid">{(kind === "network" ? (source === "link" ? LINK : NETWORK) : kind === "host" ? HOST : MINECRAFT).map(metric =>
+      {source === "link" && <details className="chart-notes"><summary>Link Measurement Notes</summary><p>Five router probes per reading. Loss averages are weighted by probes sent. Link speed is the negotiated connection rate, not available internet bandwidth. Interface changes break chart lines; mixed-interface intervals appear as gaps. Missing driver readings appear as gaps.</p></details>}
+      <div className="history-grid">{(kind === "network" ? (source === "link" ? LINK.filter(metric =>
+        ["latency_ms", "loss_percent"].includes(metric.key) ||
+        (metric.key === "link_speed_mbps" ? linkType === "ethernet" : linkType === "wifi") ||
+        data.points.some(point => point.metrics[metric.key]?.count > 0)) : NETWORK) : kind === "host" ? HOST : MINECRAFT).map(metric =>
         <MetricChart key={`${kind}:${serviceId}:${range}:${metric.key}`} history={data} metric={metric} />)}</div>
     </>}
   </section>

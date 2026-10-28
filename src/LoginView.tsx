@@ -101,7 +101,7 @@ function LoginView({
           </div>
 
           {error && (
-            <p className="login-error">
+            <p className="login-error" role="alert">
               {error}
             </p>
           )}
