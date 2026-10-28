@@ -1,9 +1,17 @@
 export type ManagedService = {
+  node_id?: string
+  node_label?: string
+  controls_available?: boolean
+  resource_key?: string | null
   id: number
   name: string
   display_name: string
   runtime_type: string
   runtime_name: string | null
+  resources?: ServiceResourceReading
+  resourcesError?: string | null
+  statusUpdatedAt?: number | null
+  statusError?: string | null
   runtime: {
     state: string
   } | null
@@ -49,6 +57,8 @@ export type MetricAggregate = {
   count: number
 }
 export type HistoryPoint = {
+  interfaces?: string[]
+  mixed_interfaces?: boolean
   timestamp: number
   samples: number
   expected: number
@@ -70,3 +80,19 @@ export type TelemetryHistory = {
   covered_seconds?: number
   points: HistoryPoint[]
 }
+
+export type ServiceResourceReading = {
+  state: string
+  health: string
+  observed_at: number | null
+  sampled_at: number | null
+  started_at: number | null
+  uptime_seconds: number | null
+  cpu_percent: number | null
+  memory_used_bytes: number | null
+  memory_limit_bytes: number | null
+  limit_configured: boolean
+  telemetry: "ready" | "stopped" | "unavailable"
+  generation: string | null
+}
+export type ServiceResourceSnapshot = { ok: true; readings: Record<string, ServiceResourceReading> }

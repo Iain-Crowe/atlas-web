@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { isMinecraftService } from "../utils/minecraft"
 import { apiFetch } from "../api"
 import type { ManagedService, MinecraftStatus } from "../types"
 
@@ -6,10 +7,10 @@ type Result = { minecraftUpdatedAt: number | null; key: string; minecraftStatus:
 
 export default function useMinecraftStatus(authenticated: boolean, selectedService: ManagedService | null) {
   const id = selectedService?.id
-  const name = selectedService?.name
+  const isMinecraft = isMinecraftService(selectedService)
   const state = selectedService?.runtime?.state
-  const enabled = authenticated && name === "minecraft" && state === "running"
-  const key = `${id}:${state}`
+  const enabled = authenticated && isMinecraft && state === "running"
+  const key = `${id}:${selectedService?.runtime_name}:${state}:${selectedService?.resources?.generation ?? ""}`
   const [result, setResult] = useState<Result>({ minecraftUpdatedAt: null, key: "", minecraftStatus: null, minecraftError: null })
   useEffect(() => {
     if (!enabled || id === undefined) return
@@ -29,8 +30,10 @@ export default function useMinecraftStatus(authenticated: boolean, selectedServi
         const data: MinecraftStatus = await response.json()
         if (!disposed) setResult({ minecraftUpdatedAt: Date.now() / 1000, key, minecraftStatus: data, minecraftError: null })
       } catch (error) {
-        if (!disposed) setResult({ minecraftUpdatedAt: null, key, minecraftStatus: null,
-          minecraftError: error instanceof Error ? error.message : "Minecraft telemetry unavailable" })
+        if (!disposed) setResult(previous => ({
+          minecraftUpdatedAt: previous.key === key ? previous.minecraftUpdatedAt : null,
+          minecraftStatus: previous.key === key ? previous.minecraftStatus : null, key,
+          minecraftError: error instanceof Error ? error.message : "Minecraft telemetry unavailable" }))
       } finally {
         clearTimeout(timeout)
         if (!disposed) timer = setTimeout(() => void load(), 3000)
@@ -39,6 +42,6 @@ export default function useMinecraftStatus(authenticated: boolean, selectedServi
     void load()
     return () => { disposed = true; controller?.abort(); clearTimeout(timer) }
   }, [enabled, id, key])
-  if (!enabled) return { minecraftUpdatedAt: null, minecraftStatus: null, minecraftError: name === "minecraft" ? "Live telemetry is available while the container is running." : null }
+  if (!enabled) return { minecraftUpdatedAt: null, minecraftStatus: null, minecraftError: isMinecraft ? "Live telemetry is available while the container is running." : null }
   return result.key === key ? result : { minecraftUpdatedAt: null, minecraftStatus: null, minecraftError: null }
 }

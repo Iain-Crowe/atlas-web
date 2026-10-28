@@ -1,4 +1,5 @@
-import Freshness from "./Freshness"
+import { retainReadings } from "../utils/retainReadings"
+import ReadingSummary from "./ReadingSummary"
 import { useEffect, useState } from "react"
 import { apiFetch } from "../api"
 import "./PiHolePanel.css"
@@ -29,9 +30,9 @@ export default function PiHolePanel({ serviceId }: { serviceId: number }) {
         const response = await apiFetch(`/services/${serviceId}/pihole/status`, { signal: requestController.signal })
         if (!response.ok) throw new Error(`Pi-hole telemetry unavailable (${response.status})`)
         const snapshot: Snapshot = await response.json()
-        if (!disposed) { setData(snapshot); setError(null) }
+        if (!disposed) { setData(previous => retainReadings(previous, snapshot)); setError(null) }
       } catch (reason) {
-        if (!disposed) { setData(null); setError(reason instanceof Error ? reason.message : "Pi-hole telemetry unavailable") }
+        if (!disposed) { setError(reason instanceof Error ? reason.message : "Pi-hole telemetry unavailable") }
       } finally {
         clearTimeout(deadline)
         if (!disposed) timer = setTimeout(() => void load(), 30000)
@@ -40,26 +41,29 @@ export default function PiHolePanel({ serviceId }: { serviceId: number }) {
     void load()
     return () => { disposed = true; controller?.abort(); clearTimeout(timer) }
   }, [serviceId])
-  const summary = data?.summary.state === "ready" ? data.summary.values : null
-  const blocking = data?.blocking.state === "ready" ? data.blocking.values : null
+  const summary = data?.summary.updated_at != null ? data.summary.values : null
+  const blocking = data?.blocking.updated_at != null ? data.blocking.values : null
   return <section className="pihole-panel">
     <div className="pihole-heading"><h3>Pi-Hole Telemetry</h3>
-      <a href="https://pihole.atlas.home.arpa/admin/" target="_blank" rel="noopener noreferrer">Open Pi-Hole Dashboard ↗</a>
     </div>
     {error && <p role="status">{error}</p>}
     {!data && !error && <p role="status">Loading Pi-hole telemetry…</p>}
     {data && !summary && <p role="status">{data.summary.state === "warming_up" ? "Waiting for the first statistics reading…" : "Pi-hole statistics are currently unavailable."}</p>}
-    <div className="pihole-metrics">
+    <div className="pihole-metrics pihole-primary">
       <div className="pihole-metric blocking-metric" data-blocking={blocking?.status ?? "unknown"}><span>DNS Blocking</span><strong>{blocking ? states[blocking.status] : "Unavailable"}</strong>
         {blocking?.timer_seconds != null && <small>Scheduled Change In {Math.ceil(blocking.timer_seconds)} Seconds</small>}
       </div>
-      {labels.map(([key, label]) => <div className="pihole-metric" key={key}><span>{label}</span>
+      {labels.filter(([key]) => ["queries", "percent_blocked"].includes(key)).map(([key, label]) => <div className="pihole-metric" key={key}><span>{label}</span>
         <strong>{summary ? key === "percent_blocked" ? `${summary[key].toFixed(1)}%` : summary[key].toLocaleString() : "—"}</strong>
       </div>)}
     </div>
+    <div className="pihole-metrics pihole-secondary">
+      {labels.filter(([key]) => !["queries", "percent_blocked"].includes(key)).map(([key, label]) => <div className="pihole-metric" key={key}><span>{label}</span><strong>{summary ? summary[key].toLocaleString() : "—"}</strong></div>)}
+    </div>
     <p className="history-muted">Statistics reflect Pi-hole’s current reporting window. Active clients are clients seen in that window, not necessarily connected now. Blocklist Domains is the gravity-list count.</p>
-    <p className="history-muted">Statistics: <Freshness timestamp={data?.summary.updated_at} error={!!data && data.summary.state !== "ready"} /><br />
-      Blocking: <Freshness timestamp={data?.blocking.updated_at} error={!!data && data.blocking.state !== "ready"} /><br />
-      Refreshes every 30 seconds. Atlas stores no Pi-hole history.</p>
+    <ReadingSummary error={!!error} readings={[
+      { name: "Statistics", timestamp: data?.summary.updated_at, maxAge: 90, available: data?.summary.state === "ready" },
+      { name: "Blocking", timestamp: data?.blocking.updated_at, maxAge: 90, available: data?.blocking.state === "ready" },
+    ]} cadence="Refreshes every 30s · No history stored" />
   </section>
 }

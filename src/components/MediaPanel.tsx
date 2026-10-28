@@ -1,4 +1,5 @@
-import Freshness from "./Freshness"
+import { retainReadings } from "../utils/retainReadings"
+import useNow from "../hooks/useNow"
 import { useEffect, useState } from "react"
 import "./MediaPanel.css"
 import MediaServiceBadge from "./MediaServiceBadge"
@@ -17,7 +18,7 @@ type Snapshot = {
 }
 const messages: Record<string, string> = { warming_up: "Waiting For First Reading", unavailable: "Unavailable", not_configured: "Credentials Need Setup", unauthorized: "Authentication Needs Attention", timeout: "Timed Out", limit: "Collection Limit Reached", invalid_response: "Unexpected API Response", changing: "Queue Changed During Reading", stopped: "Service Stopped" }
 const names: Record<string, string> = { sonarr: "Sonarr", radarr: "Radarr", prowlarr: "Prowlarr", seerr: "Seerr", qbittorrent: "qBittorrent", gluetun: "Gluetun", flaresolverr: "FlareSolverr" }
-const value = <T,>(reading: Reading<T> | undefined): T | null => reading?.state === "ready" ? reading.values : null
+const value = <T,>(reading: Reading<T> | undefined): T | null => reading?.updated_at != null ? reading.values : null
 const countLabel = (count: number, label: string) => `${count} ${label}${count === 1 ? "" : "s"}`
 const fmt = (n: number | null | undefined) => n == null ? "—" : n.toLocaleString()
 const rate = (n: number | undefined) => n == null ? "—" : `${(n * 8 / 1e6).toFixed(2)} Mbps`
@@ -28,6 +29,27 @@ const activityTone = (n: number | null | undefined, tone: MetricTone = "activity
   n == null || !Number.isFinite(n) || n <= 0 ? "neutral" : tone
 const alertTone = (n: number | null | undefined, tone: "warning" | "danger"): MetricTone =>
   n == null || !Number.isFinite(n) ? "neutral" : n > 0 ? tone : "good"
+
+const readingNames = { containers: "Containers", downloads: "Downloads", sonarr: "Sonarr", radarr: "Radarr", prowlarr: "Prowlarr", seerr: "Seerr" } as const
+
+function MediaFreshness({ data, error }: { data: Snapshot | null; error: string | null }) {
+  const now = useNow()
+  if (!data) return <p className="media-freshness">{error ? "Telemetry unavailable" : "Waiting for telemetry"} · Refreshes every 30s</p>
+  const sources = (Object.keys(readingNames) as (keyof Snapshot)[]).map(key => ({ name: readingNames[key], reading: data[key] }))
+  const ready = sources.filter(({ reading }) => reading.updated_at != null && Number.isFinite(reading.updated_at))
+  const unavailable = sources.filter(source => !ready.includes(source) || source.reading.state !== "ready").map(({ name, reading }) => `${name}: ${messages[reading.state] ?? "No timestamp"}`)
+  const stale = ready.filter(({ reading }) => reading.state === "ready" && (error || now - reading.updated_at! > 90)).map(({ name }) => name)
+  return <p className="media-freshness" tabIndex={0} title={ready.map(({ name, reading }) => `${name}: ${new Date(reading.updated_at! * 1000).toLocaleString()}`).join("\n")}>
+    <span>{!ready.length ? "No current readings" : stale.length || unavailable.length ? "Telemetry needs attention" : "Readings current"}</span>
+    {stale.length > 0 && <span className="media-freshness-warning"> · Stale: {stale.join(", ")}</span>}
+    {unavailable.length > 0 && <span className="media-freshness-warning"> · {unavailable.join(" · ")}</span>}
+  </p>
+}
+
+type MediaMetric = [string, string, MetricTone]
+function MetricValues({ metrics, className = "" }: { metrics: MediaMetric[]; className?: string }) {
+  return <dl className={`media-metrics ${className}`}>{metrics.map(([label, text, tone]) => <div className={`media-metric media-tone-${tone}`} key={label}><dt>{label}</dt><dd>{text}</dd></div>)}</dl>
+}
 
 export default function MediaPanel() {
   const [data, setData] = useState<Snapshot | null>(null)
@@ -43,9 +65,9 @@ export default function MediaPanel() {
         const response = await apiFetch('/media/status', { signal: current.signal })
         if (!response.ok) throw new Error(`Media telemetry unavailable (${response.status})`)
         const snapshot: Snapshot = await response.json()
-        if (!disposed) { setData(snapshot); setError(null) }
+        if (!disposed) { setData(previous => retainReadings(previous, snapshot)); setError(null) }
       } catch (reason) {
-        if (!disposed) { setData(null); setError(reason instanceof Error ? reason.message : "Media Telemetry Unavailable") }
+        if (!disposed) { setError(reason instanceof Error ? reason.message : "Media Telemetry Unavailable") }
       } finally {
         clearTimeout(deadline)
         if (!disposed) timer = setTimeout(() => void load(), 30000)
@@ -100,10 +122,9 @@ export default function MediaPanel() {
   }
   const alertCount = errors === null || warnings === null || unhealthy === null ? null : errors + warnings + unhealthy
   const notRunning = containers ? Object.keys(containers).length - (running ?? 0) : null
-  const metricGroups = [
-    { title: "Downloads", accent: "activity", metrics: metrics.slice(2, 11) },
-    { title: "Library Pipeline", accent: "library", metrics: metrics.slice(11, 16) },
-    { title: "Requests & Alerts", accent: "warning", metrics: metrics.slice(16) },
+  const libraryGroups = [
+    { title: "Movies", source: "Radarr", metrics: [metrics[11], metrics[13]] },
+    { title: "TV", source: "Sonarr", metrics: [metrics[12], metrics[14]] },
   ]
   return <section className="panel service-detail media-panel service-themed" data-service="media" data-alert-severity={(errors ?? 0) > 0 || (unhealthy ?? 0) > 0 ? "danger" : "normal"}>
     <ServiceIdentity name="media" title="Media Stack" />
@@ -114,8 +135,24 @@ export default function MediaPanel() {
     {error && <p role="status" className="history-warning">{error}</p>}
     {!data && !error && <p role="status">Loading media telemetry…</p>}
     {containers && <div className="media-services">{Object.entries(containers).map(([name, c]) => <MediaServiceBadge key={name} name={name} label={names[name] ?? name} state={c.state} health={c.health} />)}</div>}
-    {metricGroups.map(group => <section className={`metric-group media-group-${group.accent}`} key={group.title}><h3>{group.title}</h3><div className="media-metrics">{group.metrics.map(([label, text, tone]) => <div className={`media-metric media-tone-${tone}`} key={label}><span>{label}</span><strong>{text}</strong></div>)}</div></section>)}
-    <div className="media-readings">{data && (['containers', 'downloads', 'sonarr', 'radarr', 'prowlarr', 'seerr'] as const).map(key => <span key={key}>{({ containers: 'Container Status', downloads: 'Downloads', sonarr: 'TV Pipeline', radarr: 'Movie Pipeline', prowlarr: 'Indexers', seerr: 'Requests' })[key]}: {data[key].state === 'ready' && data[key].updated_at != null ? <Freshness timestamp={data[key].updated_at} /> : messages[data[key].state] ?? 'Unavailable'}</span>)}</div>
+    <section className="metric-group media-group-activity">
+      <h3>Downloads</h3>
+      <MetricValues className="media-primary" metrics={[metrics[2], metrics[3], metrics[5], metrics[6]]} />
+      <MetricValues className="media-secondary" metrics={[metrics[4], ...metrics.slice(7, 11)]} />
+    </section>
+    <section className="metric-group media-group-library">
+      <h3>Library Pipeline</h3>
+      <div className="media-library-grid">{libraryGroups.map(group => <section className="media-library-card" key={group.title}>
+        <header><h4>{group.title}</h4><span>{group.source}</span></header>
+        <MetricValues metrics={group.metrics} />
+      </section>)}</div>
+      <MetricValues className="media-secondary media-imports" metrics={[metrics[15]]} />
+    </section>
+    <section className="metric-group media-group-warning">
+      <h3>Requests &amp; Alerts</h3>
+      <MetricValues className="media-secondary" metrics={metrics.slice(16)} />
+    </section>
+    <MediaFreshness data={data} error={error} />
     <p className="history-muted">Torrent states and movie/episode queues overlap; they are not combined into a download total. Missing movies may include unreleased titles. Application alerts cover Sonarr, Radarr and Prowlarr. Gluetun’s container health is not a VPN leak test.</p>
     <nav className="media-links" aria-label="Media Services">{['sonarr', 'radarr', 'prowlarr', 'seerr', 'qbittorrent'].map(name => <a key={name} href={`https://${name}.atlas.home.arpa/`} target="_blank" rel="noopener noreferrer">{names[name]} ↗</a>)}</nav>
   </section>

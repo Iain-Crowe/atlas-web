@@ -1,0 +1,29 @@
+.page-heading-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .8rem; min-width: 0; }
+.maintenance-control { position: relative; color: var(--text-muted); font-size: .75rem; }
+.maintenance-control summary { display: flex; align-items: center; gap: .55rem; list-style: none; cursor: pointer; border: 1px solid var(--border); border-radius: 3px; padding: .6rem .75rem; background: var(--surface); }
+.maintenance-control summary::-webkit-details-marker { display: none; }
+.maintenance-control summary:hover, .maintenance-control[open] summary { border-color: var(--accent); color: var(--text); }
+.maintenance-control summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.maintenance-control summary svg { width: 17px; height: 17px; flex: 0 0 auto; }
+.maintenance-label { padding-left: .55rem; border-left: 1px solid var(--border); }
+.maintenance-chevron { margin-left: auto; }
+.maintenance-control[open] .maintenance-chevron { transform: rotate(180deg); }
+.maintenance-info .maintenance-label { color: var(--accent); }
+.maintenance-warn summary { border-color: #9b793d; }
+.maintenance-warn .maintenance-label, .maintenance-warning { color: #e2bb78; }
+.maintenance-danger summary { border-color: #b26868; }
+.maintenance-danger .maintenance-label { color: #ee9999; }
+.maintenance-popover { position: absolute; z-index: 30; top: calc(100% + .5rem); right: 0; width: min(370px, calc(100vw - 3rem)); box-sizing: border-box; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; box-shadow: 0 8px 24px #0005; color: var(--text-muted); }
+.maintenance-popover h2 { margin: 0 0 .65rem; color: var(--text); font-size: .9rem; }
+.maintenance-popover p { margin: .5rem 0; line-height: 1.5; }
+.maintenance-popover dl { margin: .8rem 0; }
+.maintenance-popover dl > div { display: flex; justify-content: space-between; gap: 1rem; margin-top: .5rem; }
+.maintenance-popover dd { margin: 0; color: var(--text); text-align: right; }
+.maintenance-popover small { display: block; border-top: 1px solid var(--border); padding-top: .75rem; font-size: .68rem; }
+@media (max-width: 700px) {
+  .page-heading { flex-wrap: wrap; gap: 1rem; }
+  .page-heading-tools { width: 100%; justify-content: flex-start; }
+  .page-heading-tools .host-label { display: none; }
+  .maintenance-control { width: 100%; }
+  .maintenance-popover { width: 100%; }
+}

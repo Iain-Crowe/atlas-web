@@ -1,3 +1,9 @@
+import PowerPanel from "./components/PowerPanel"
+import NodesPanel from "./components/NodesPanel"
+import MaintenanceBanner from "./components/MaintenanceBanner"
+import SessionPrompt from "./components/SessionPrompt"
+import { isMinecraftService } from "./utils/minecraft"
+import { getStatusLabel } from "./utils/serviceStatus"
 import ConfirmServiceAction from "./components/ConfirmServiceAction"
 import Freshness from "./components/Freshness"
 import { useEffect, useRef, useState } from "react"
@@ -20,9 +26,10 @@ import useMinecraftStatus from "./hooks/useMinecraftStatus"
 import type { ManagedService, ServiceAction } from "./types"
 
 const views = {
-  overview: { label: "Overview", description: "Your host and managed services at a glance." },
+  overview: { label: "Overview", description: "Your nodes and managed services at a glance." },
   services: { label: "Services", description: "Inspect workloads, view telemetry, and manage runtime state." },
   network: { label: "Network", description: "Host traffic, service bandwidth, and connection quality." },
+  power: { label: "Power", description: "UPS-connected equipment energy and cost estimates." },
   history: { label: "History", description: "Explore host measurements over time." },
 } as const
 
@@ -43,6 +50,14 @@ function Console({ logout }: { logout: () => void }) {
   const { services, servicesLoading, servicesError, refreshServices, servicesUpdatedAt } = useServices(authenticated)
   const [view, setView] = useState<View>(() => savedNavigation().view)
   const [selection, setSelection] = useState<number | "media" | null>(() => savedNavigation().selection)
+  const [minecraftChoice, setMinecraftChoice] = useState<number | null>(() => {
+    try { const value = Number(sessionStorage.getItem("atlas.minecraftChoice")); return Number.isInteger(value) && value > 0 ? value : null } catch { return null }
+  })
+  const minecraftServers = services.filter(isMinecraftService)
+  const minecraftTarget = minecraftServers.find(service => service.id === selection) ?? minecraftServers.find(service => service.id === minecraftChoice) ?? minecraftServers[0]
+  const firstMinecraftId = minecraftServers[0]?.id
+  const navigationServices = services.flatMap(service => !isMinecraftService(service) ? [service] : service.id === firstMinecraftId && minecraftTarget ? [minecraftTarget] : [])
+  const navigationCard = (service: ManagedService): ManagedService => isMinecraftService(service) ? { ...service, name: "minecraft", display_name: "Minecraft" } : service
   const selectedService = services.find(service => service.id === selection) ?? null
   const { minecraftStatus, minecraftError, minecraftUpdatedAt } = useMinecraftStatus(authenticated && view === "services", selectedService)
   const [pending, setPending] = useState<PendingAction | null>(null)
@@ -61,6 +76,13 @@ function Console({ logout }: { logout: () => void }) {
     setView("overview")
     setActionError(null)
     setPending(null)
+  }
+
+  function handleMinecraftChoice(id: number) {
+    setMinecraftChoice(id)
+    try { sessionStorage.setItem("atlas.minecraftChoice", String(id)) } catch { /* Optional persistence. */ }
+    setSelection(id)
+    setActionError(null)
   }
 
   function handleSelectService(service: ManagedService) {
@@ -127,7 +149,7 @@ function Console({ logout }: { logout: () => void }) {
     <header className="topbar">
       <div className="brand-group">
         <div className="brand-logo-wrap"><img src="/atlas-logo.png" alt="" className="brand-logo" /></div>
-        <div><p className="brand">Atlas</p><p className="subtitle">Homelab Control Console</p></div>
+        <div><p className="brand">Atlas</p><p className="subtitle">SYSTEMS / CONTROL</p></div>
       </div>
       <button className="logout-button" onClick={handleLogout}>Sign out</button>
     </header>
@@ -138,33 +160,57 @@ function Console({ logout }: { logout: () => void }) {
       disabled={!!servicesError || pending !== null || services.find(item => item.id === confirmation.service.id)?.runtime?.state !== "running"}
       onCancel={() => setConfirmation(null)} onConfirm={() => void handleServiceAction(confirmation.action, confirmation.service)} />}
     <main id="main-content" tabIndex={-1}>
-      <div className="page-heading"><div><h1>{views[view].label}</h1><p className="muted">{views[view].description}</p></div><span className="host-label">{systemStatus?.hostname ?? "Atlas host"}</span></div>
+      <div className="page-heading"><div><span className="page-index" aria-hidden="true">0{(Object.keys(views) as View[]).indexOf(view) + 1} / ATLAS</span><h1>{views[view].label}</h1></div><div className="page-heading-tools"><span className="host-label">{systemStatus?.hostname ?? "Atlas host"}</span><MaintenanceBanner /></div></div>
       {notice && <div className={`action-notice ${notice.error ? "history-warning" : ""}`}><p role={notice.error ? "alert" : "status"}>{notice.message}</p><button className="text-button" onClick={() => setNotice(null)} aria-label="Dismiss action feedback">Dismiss</button></div>}
       {view === "overview" && <div className="overview-layout">
-        <RuntimeSummary updatedAt={servicesUpdatedAt} services={services} loading={servicesLoading} error={servicesError} />
+        <RuntimeSummary onSelect={handleSelectService} updatedAt={servicesUpdatedAt} services={services} loading={servicesLoading} error={servicesError} />
         <SystemOverview updatedAt={systemUpdatedAt} status={systemStatus} loading={systemLoading} error={systemError} />
-        <section className="panel">
-          <div className="section-heading"><div><h2>Managed Services</h2><p className="muted">{servicesError ? "Status refresh unavailable" : servicesLoading ? "Checking runtime status…" : `${running} of ${services.length} running`}</p></div><button className="text-button" onClick={() => setView("services")}>View services →</button></div>
+        <NodesPanel />
+        <PowerPanel compact onOpen={() => setView("power")} />
+        <section className="panel overview-service-panel">
+          <div className="section-heading"><div><h2>Managed Services</h2><p className="muted">{servicesError ? "Status refresh unavailable" : servicesLoading ? "Checking runtime status…" : `${running} of ${services.length} Containers Running · ${navigationServices.length} Service Groups`}</p></div><button className="text-button" onClick={() => setView("services")}>View services →</button></div>
           {serviceFeedback}
-          <div className="overview-services">{services.map(service => <ServiceCard key={service.id} service={service} selected={false} onSelect={handleSelectService} />)}</div>
+          <div className="overview-services">{navigationServices.map(service => <ServiceCard key={service.id} service={navigationCard(service)} selected={false} onSelect={handleSelectService} />)}</div>
         </section>
         <section className="overview-shortcuts" aria-label="Explore Atlas">
-          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">Applications</span><strong>Media Stack <span aria-hidden="true">→</span></strong><span className="muted">Queues, requests, and application status.</span></button>
-          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">Network</span><strong>Network Monitoring <span aria-hidden="true">→</span></strong><span className="muted">Bandwidth, router latency, and Wi-Fi health.</span></button>
-          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">History</span><strong>Telemetry History <span aria-hidden="true">→</span></strong><span className="muted">CPU, memory, temperature, and storage.</span></button>
+          <button className="shortcut" onClick={() => { setSelection("media"); setView("services") }}><span className="eyebrow">01 / Applications</span><strong>Media Stack <span aria-hidden="true">→</span></strong><span className="muted">Queues & Requests</span></button>
+          <button className="shortcut" onClick={() => setView("network")}><span className="eyebrow">02 / Monitoring</span><strong>Network Monitoring <span aria-hidden="true">→</span></strong><span className="muted">Traffic & Link Health</span></button>
+          <button className="shortcut" onClick={() => setView("history")}><span className="eyebrow">03 / Records</span><strong>Telemetry History <span aria-hidden="true">→</span></strong><span className="muted">Host Measurements</span></button>
         </section>
       </div>}
       {view === "services" && <div className="dashboard">
+        <div className="mobile-service-picker">
+          <label htmlFor="service-picker">Service</label>
+          <select id="service-picker" value={selection === null ? "" : String(selection)} onChange={event => {
+            const value = event.target.value
+            setSelection(value === "media" ? "media" : value === "" ? null : Number(value))
+            setActionError(null)
+          }}>
+            <option value="">Select a Service</option>
+            {typeof selection === "number" && !selectedService && <option value={selection}>{servicesLoading ? "Loading Selected Service…" : "Selected Service Unavailable"}</option>}
+            <optgroup label="Managed Services">{navigationServices.map(service => <option key={service.id} value={service.id}>{isMinecraftService(service) ? "Minecraft" : service.display_name} · {getStatusLabel(service.runtime?.state)}</option>)}</optgroup>
+            <optgroup label="Applications"><option value="media">Media Stack</option></optgroup>
+          </select>
+          <Freshness timestamp={servicesUpdatedAt} maxAge={20} error={!!servicesError} />
+          {serviceFeedback}
+        </div>
         <aside className="sidebar" aria-label="Service selection"><h2 className="eyebrow">Managed Services</h2><Freshness timestamp={servicesUpdatedAt} maxAge={20} error={!!servicesError} />{serviceFeedback}
-          {services.map(service => <ServiceCard key={service.id} service={service} selected={selection === service.id} onSelect={handleSelectService} />)}
+          {navigationServices.map(service => <ServiceCard key={service.id} service={navigationCard(service)} selected={selection === service.id} onSelect={handleSelectService} />)}
           <h2 className="eyebrow sidebar-group">Applications</h2>
           <button className={`service-card ${selection === "media" ? "selected" : ""}`} aria-pressed={selection === "media"} onClick={() => { setSelection("media"); setActionError(null) }}><span className="service-name service-card-name"><ServiceIcon name="media" />Media Stack</span><span className="muted">Aggregate telemetry</span></button>
         </aside>
-        {selection === "media" ? <MediaPanel /> : <ServiceDetail service={selectedService} minecraftStatus={minecraftStatus} minecraftError={minecraftError} minecraftUpdatedAt={minecraftUpdatedAt}
+        {selection === "media" ? <MediaPanel /> : <div className="service-detail-column">
+          <ServiceDetail serverSelector={selectedService && isMinecraftService(selectedService) && <div className="minecraft-selector">
+            <label htmlFor="minecraft-server">Minecraft Server</label>
+            <select id="minecraft-server" value={selectedService.id} onChange={event => handleMinecraftChoice(Number(event.target.value))}>
+              {minecraftServers.map(service => <option key={service.id} value={service.id}>{service.display_name}</option>)}
+            </select>
+          </div>} service={selectedService} minecraftStatus={minecraftStatus} minecraftError={minecraftError} minecraftUpdatedAt={minecraftUpdatedAt}
           actionLoading={pending?.serviceId === selectedService?.id ? pending?.action ?? null : null}
           actionsDisabled={pending !== null || servicesError !== null}
-          actionError={actionError?.serviceId === selectedService?.id ? actionError?.message ?? null : null} onAction={requestServiceAction} />}
+          actionError={actionError?.serviceId === selectedService?.id ? actionError?.message ?? null : null} onAction={requestServiceAction} /></div>}
       </div>}
+      {view === "power" && <PowerPanel />}
       {view === "network" && <NetworkPanel />}
       {view === "history" && <HistoryPanel kind="host" />}
     </main>
@@ -172,7 +218,7 @@ function Console({ logout }: { logout: () => void }) {
   </div>
 }
 export default function App() {
-  const { authenticated, checkingAuth, login, logout } = useAuth()
+  const { authenticated, checkingAuth, login, logout, remaining, renewing, renewError, renew } = useAuth()
   if (checkingAuth) return <main className="login-page"><p role="status">Loading Atlas…</p></main>
-  return authenticated ? <Console logout={logout} /> : <LoginView onLogin={login} />
+  return authenticated ? <><Console logout={logout} />{remaining !== null && <SessionPrompt remaining={remaining} renewing={renewing} error={renewError} onRenew={renew} onLogout={logout} />}</> : <LoginView onLogin={login} />
 }
