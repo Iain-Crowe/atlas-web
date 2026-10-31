@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://192.168.4.21",
+        target: "http://atlas.home.arpa",
         changeOrigin: true,
       },
     },

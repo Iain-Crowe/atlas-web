@@ -1,6 +1,9 @@
+import Freshness from "./Freshness"
+import StatusBanner from "./StatusBanner"
 import type { SystemStatus } from "../types"
 
 type SystemOverviewProps = {
+  updatedAt: number | null
   status: SystemStatus | null
   loading: boolean
   error: string | null
@@ -50,6 +53,7 @@ function getTemperatureTone(temp: number | null): MetricTone {
 
 function SystemOverview({
   status,
+  updatedAt,
   loading,
   error,
 }: SystemOverviewProps) {
@@ -65,49 +69,55 @@ function SystemOverview({
     ? getUsagePercent(status.disk.used_gb, status.disk.total_gb)
     : 0
 
-  const cpuUsagePercent = status
-    ? clampPercent(status.cpu.usage_percent)
-    : 0
+  const cpuUsagePercent = status?.cpu.usage_percent == null
+    ? null
+    : clampPercent(status.cpu.usage_percent)
 
-  const cpuUsageTone = getUsageTone(cpuUsagePercent)
+  const cpuUsageTone = cpuUsagePercent === null ? "neutral" : getUsageTone(cpuUsagePercent)
 
   const cpuTemperatureTone = status
     ? getTemperatureTone(status.cpu.temperature_c)
     : "neutral"
 
+  const highReadings = status && !error ? [
+    ...(cpuUsagePercent !== null && cpuUsagePercent >= 85 ? ["CPU utilization"] : []),
+    ...(status.cpu.temperature_c !== null && status.cpu.temperature_c >= 75 ? ["CPU temperature"] : []),
+    ...(memoryUsagePercent >= 85 ? ["memory usage"] : []),
+    ...(diskUsagePercent >= 85 ? ["disk usage"] : []),
+  ] : []
+  const uptime = status && Number.isFinite(status.uptime_seconds)
+    ? `${Math.floor(status.uptime_seconds / 86400)}d ${Math.floor(status.uptime_seconds % 86400 / 3600)}h uptime`
+    : null
+
   return (
     <section className="panel system-overview">
-      <h2>System Overview</h2>
+      <div className="section-heading host-heading"><div><h2>Host Resources</h2><p className="muted">{status?.hostname ?? "Atlas"}{uptime ? ` · ${uptime}` : ""}</p></div><Freshness timestamp={updatedAt} maxAge={20} error={!!error} /></div>
+      {highReadings.length > 0 && <StatusBanner tone="attention" title="Elevated Resource Readings" description={highReadings.join(" · ")} />}
 
-      {loading && <p>Loading system status...</p>}
-      {error && <p>{error}</p>}
+      {loading && <p role="status">Loading system status…</p>}
+      {error && <p className="history-warning" role="status">Host readings may be out of date. {error}</p>}
 
       {status && (
         <div className="system-stats enhanced">
-          <div className="stat-row host-row">
-            <span>Host</span>
-            <strong>{status.hostname}</strong>
-          </div>
-
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>CPU</span>
+              <span>CPU Utilization</span>
               <strong className={`metric-value ${cpuUsageTone}`}>
-                {cpuUsagePercent.toFixed(1)}%
+                {cpuUsagePercent === null ? "Unavailable / warming up" : `${cpuUsagePercent.toFixed(1)}%`}
               </strong>
             </div>
 
             <div className="meter">
               <div
                 className={`meter-fill ${cpuUsageTone}`}
-                style={{ width: `${cpuUsagePercent}%` }}
+                style={{ width: `${cpuUsagePercent ?? 0}%` }}
               />
             </div>
           </div>
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>Temperature</span>
+              <span>CPU Temperature</span>
               <strong
                 className={`metric-value ${cpuTemperatureTone}`}
               >
@@ -141,8 +151,7 @@ function SystemOverview({
                   memoryUsagePercent
                 )}`}
               >
-                {memoryUsedMb.toFixed(0)} /{" "}
-                {status.memory.total_mb.toFixed(0)} MB
+                {(memoryUsedMb / 1024).toFixed(1)} <small>/ {(status.memory.total_mb / 1024).toFixed(1)} GiB</small>
               </strong>
             </div>
 
@@ -158,14 +167,13 @@ function SystemOverview({
 
           <div className="telemetry-item">
             <div className="telemetry-head">
-              <span>Disk</span>
+              <span>Data Disk</span>
               <strong
                 className={`metric-value ${getUsageTone(
                   diskUsagePercent
                 )}`}
               >
-                {status.disk.used_gb.toFixed(1)} /{" "}
-                {status.disk.total_gb.toFixed(1)} GB
+                {status.disk.used_gb.toFixed(1)} <small>/ {status.disk.total_gb.toFixed(1)} GB</small>
               </strong>
             </div>
 
@@ -180,7 +188,7 @@ function SystemOverview({
           </div>
 
           <div className="stat-row">
-            <span>Load</span>
+            <span>Load · 1 Minute</span>
             <strong>{status.load_average[0].toFixed(2)}</strong>
           </div>
         </div>

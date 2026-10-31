@@ -1,3 +1,7 @@
+import ServiceResources from "./ServiceResources"
+import useNow from "../hooks/useNow"
+import { getStatusClass, serviceLabel } from "../utils/serviceStatus"
+import { ServiceIcon } from "./ServiceIdentity"
 import type { ManagedService } from "../types"
 
 type ServiceCardProps = {
@@ -6,65 +10,38 @@ type ServiceCardProps = {
   onSelect: (service: ManagedService) => void
 }
 
-function getStatusClass(state?: string) {
-  switch (state) {
-    case "running":
-      return "status-running"
-
-    case "exited":
-    case "dead":
-      return "status-stopped"
-
-    default:
-      return "status-unknown"
-  }
-}
-
-function getStatusLabel(state?: string) {
-  switch (state) {
-    case "running":
-      return "Running"
-
-    case "exited":
-    case "dead":
-      return "Stopped"
-
-    case "paused":
-      return "Paused"
-
-    case "restarting":
-      return "Restarting"
-
-    default:
-      return "Unknown"
-  }
-}
-
 function ServiceCard({
   service,
   selected,
   onSelect,
 }: ServiceCardProps) {
+  const now = useNow()
+  const label = serviceLabel(service, now)
   return (
     <button
+      type="button"
+      aria-pressed={selected}
       className={`service-card ${selected ? "selected" : ""}`}
       onClick={() => onSelect(service)}
     >
-      <span className="service-name">
+      <span className="service-name service-card-name">
+        <ServiceIcon name={service.name} />
         {service.display_name}
       </span>
 
-      <div className="service-status">
+      <span className="service-status">
         <span
           className={`status-dot ${getStatusClass(
-            service.runtime?.state
+            label === "Running" ? "running" : ["Starting", "Unhealthy", "Status Stale"].includes(label) ? "restarting" : service.runtime?.state
           )}`}
         />
 
         <span className="status-text">
-          {getStatusLabel(service.runtime?.state)}
+          {label}
         </span>
-      </div>
+      </span>
+      <span className="minecraft-card-target" >{service.name === "minecraft" ? service.runtime_name === "minecraft-craftbox" ? "Craftbox" : "Primary Server" : service.node_label ?? "Atlas"}</span>
+      <ServiceResources service={service} />
     </button>
   )
 }
